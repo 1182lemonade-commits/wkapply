@@ -781,8 +781,17 @@
         연맹
       </button>
 
+      <button class="tab" data-tab="changes">변경사항</button>
     </nav>
 
+
+    <section id="tab-changes" class="tab-panel hidden">
+      <div class="panel">
+        <h2>신청 변경사항</h2>
+        <p class="muted">선택한 서버의 신청 수정 이력입니다. 최신 변경부터 표시하며, 한 번에 여러 항목이 바뀌면 항목별로 표시합니다.</p>
+        <div id="applicationChangesList" aria-live="polite"></div>
+      </div>
+    </section>
 
     <!-- SETTINGS -->
     <section
@@ -1346,6 +1355,7 @@
     alliances:[],
     agreements:[],
     applications:[],
+    applicationChanges:[],
     emailRecipients:[],
     emailDeliveryLogs:[]
   };
@@ -1637,6 +1647,7 @@
       alliances:[],
       agreements:[],
       applications:[],
+    applicationChanges:[],
       emailRecipients:[],
       emailDeliveryLogs:[]
     };
@@ -2453,6 +2464,9 @@
     async event => {
       selectedServerCode = event.target.value;
       selectedApplicationCycleNumber = null;
+      adminData.applicationChanges = [];
+      adminData.application_changes = [];
+      renderApplicationChanges();
 
       if (selectedServerCode) {
         sessionStorage.setItem(
@@ -4076,6 +4090,7 @@
           : null;
 
       renderApplications();
+    renderApplicationChanges();
       setStatus("applicationsStatus");
     }
   );
@@ -4303,6 +4318,82 @@
   // RENDER ALL
   // =========================================================
 
+  // wk-admin GET: applicationChanges or application_changes, field-level update rows.
+  // Missing action means update for compatibility with update-only audit tables.
+  function renderApplicationChanges() {
+    const container = document.getElementById("applicationChangesList");
+    container.replaceChildren();
+    if (!selectedServerCode) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "서버를 선택해 주세요.";
+      container.append(empty);
+      return;
+    }
+    const raw = Array.isArray(adminData.applicationChanges)
+      ? adminData.applicationChanges
+      : (Array.isArray(adminData.application_changes) ? adminData.application_changes : []);
+    const selectedServer = selectedServerRecord();
+    const rows = raw.filter(item => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const action = item.action ?? item.change_type ?? item.changeType ?? "update";
+      if (String(action).toLowerCase() !== "update") return false;
+      const code = item.server_code ?? item.serverCode;
+      const id = item.server_id ?? item.serverId;
+      if (code != null && String(code) !== String(selectedServerCode)) return false;
+      if (id != null && selectedServer?.id != null && String(id) !== String(selectedServer.id)) return false;
+      // Rows without server identifiers must already be scoped by wk-admin GET.
+      return typeof (item.field_name ?? item.fieldName) === "string";
+    }).map((item, index) => ({item, index, time:Date.parse(item.changed_at ?? item.changedAt ?? "")}));
+    rows.sort((a, b) => (Number.isFinite(b.time) ? b.time : -Infinity) -
+      (Number.isFinite(a.time) ? a.time : -Infinity) || a.index - b.index);
+    if (!rows.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "변경 이력이 없습니다.";
+      container.append(empty);
+      return;
+    }
+    const labels = {
+      player_name:"플레이어명", tier_id:"티어", alliance_id:"연맹",
+      troop_type:"병종", troop_size:"부대 규모", rally_size:"집결 규모",
+      realtime_response:"실시간 대응", captain_role:"리더 역할", participation_time:"참여 시간"
+    };
+    const formatValue = value => {
+      if (value === null || value === undefined) return "—";
+      if (value === "") return "(빈 값)";
+      if (typeof value === "object") return JSON.stringify(value);
+      return String(value);
+    };
+    const wrap = document.createElement("div");
+    wrap.className = "table-wrap";
+    wrap.tabIndex = 0;
+    wrap.setAttribute("role", "region");
+    wrap.setAttribute("aria-label", "신청 변경 이력 표. 가로 스크롤 가능");
+    const table = document.createElement("table");
+    table.innerHTML = '<thead><tr><th scope="col">변경 시각 (기기 시간대)</th><th scope="col">회차</th><th scope="col">플레이어명</th><th scope="col">변경 필드</th><th scope="col">변경 전 값</th><th scope="col">변경 후 값</th></tr></thead><tbody></tbody>';
+    const body = table.querySelector("tbody");
+    rows.forEach(({item, time}) => {
+      const field = item.field_name ?? item.fieldName;
+      const date = Number.isFinite(time) ? new Date(time).toLocaleString("ko-KR", {hour12:false}) : "—";
+      const values = [date, item.cycle_number ?? item.cycleNumber ?? "—",
+        item.player_name ?? item.playerName ?? "—", labels[field] ?? field,
+        formatValue(item.old_value !== undefined ? item.old_value : item.oldValue),
+        formatValue(item.new_value !== undefined ? item.new_value : item.newValue)];
+      const row = document.createElement("tr");
+      values.forEach(value => {
+        const cell = document.createElement("td");
+        cell.textContent = String(value);
+        cell.style.whiteSpace = "pre-wrap";
+        cell.style.overflowWrap = "anywhere";
+        row.append(cell);
+      });
+      body.append(row);
+    });
+    wrap.append(table);
+    container.append(wrap);
+  }
+
   function renderAll() {
     renderServerSelector();
     renderServerManagement();
@@ -4312,6 +4403,7 @@
     renderTiers();
     renderAlliances();
     renderApplications();
+    renderApplicationChanges();
   }
 
 
