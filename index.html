@@ -625,6 +625,17 @@
         </div>
 
 
+        <!-- OPTIONAL DEVICE-LOCAL PROFILE (no name: excluded from submission) -->
+        <div class="field">
+          <label class="choice">
+            <input id="rememberProfile" type="checkbox" aria-describedby="profileNotice">
+            <span id="rememberProfileText"></span>
+          </label>
+          <p id="profileNotice" class="small"></p>
+          <button id="deleteProfileButton" type="button"></button>
+          <p id="profileStatus" class="small" role="status" aria-live="polite"></p>
+        </div>
+
         <div class="submit-row">
 
           <button
@@ -651,6 +662,13 @@
 
 
 <script>
+  // Storage can be unavailable in private/restricted browsers. Keep the form usable.
+  const deviceStorage = {
+    getItem(key) { try { return localStorage.getItem(key); } catch { return null; } },
+    setItem(key, value) { try { localStorage.setItem(key, value); return true; } catch { return false; } },
+    removeItem(key) { try { localStorage.removeItem(key); return true; } catch { return false; } }
+  };
+
   const landingTranslations = {
     ko: {
       title: "어느 서버에서 오셨나요?",
@@ -696,8 +714,8 @@
 
   function getLandingLanguage() {
     const saved =
-      localStorage.getItem("wkapplication-language") ||
-      localStorage.getItem("language") ||
+      deviceStorage.getItem("wkapplication-language") ||
+      deviceStorage.getItem("language") ||
       "";
 
     if (landingTranslations[saved]) return saved;
@@ -1451,7 +1469,7 @@
   }
 
   const savedLanguage =
-    localStorage.getItem(
+    deviceStorage.getItem(
       "wkapplication-language"
     );
 
@@ -1508,7 +1526,7 @@
   // =========================================================
 
   const savedTheme =
-    localStorage.getItem(
+    deviceStorage.getItem(
       "wkapplication-theme"
     ) || "system";
 
@@ -1529,7 +1547,7 @@
       document.documentElement.dataset.theme =
         value;
 
-      localStorage.setItem(
+      deviceStorage.setItem(
         "wkapplication-theme",
         value
       );
@@ -1541,6 +1559,96 @@
   // =========================================================
   // HELPERS
   // =========================================================
+
+  const PROFILE_TEXT = {
+    ko: {
+      remember: "다음 신청을 위해 이 기기에 입력값 저장",
+      notice: "선택하면 제출 시 이 서버의 입력값을 이 브라우저에만 저장합니다. 별도 서버 프로필로 저장하지 않으며, 동의·서버 확인·민감정보·인증정보는 저장하지 않습니다. 공용 기기에서는 선택하지 마세요.",
+      delete: "저장된 프로필 삭제", deleted: "이 서버의 저장된 프로필을 삭제했습니다.",
+      unavailable: "브라우저 저장소를 사용할 수 없어 프로필을 저장하거나 삭제하지 못했습니다. 신청은 계속할 수 있습니다."
+    },
+    en: {
+      remember: "Save my entries on this device for my next application",
+      notice: "If selected, submitting saves this server’s entries only in this browser, without a separate server-side profile. Agreements, server confirmation, sensitive data and credentials are not saved. Do not select this on a shared device.",
+      delete: "Delete saved profile", deleted: "The saved profile for this server has been deleted.",
+      unavailable: "Browser storage is unavailable; the profile could not be saved or deleted. You can still submit your application."
+    },
+    ja: {
+      remember: "次回の申請のために入力内容をこの端末に保存する",
+      notice: "選択すると、送信時にこのサーバーの入力内容をこのブラウザーだけに保存します。サーバー上の別のプロフィールとしては保存せず、同意・所属確認・機密情報・認証情報も保存しません。共用端末では選択しないでください。",
+      delete: "保存したプロフィールを削除", deleted: "このサーバーの保存済みプロフィールを削除しました。",
+      unavailable: "ブラウザーのストレージを利用できないため、プロフィールを保存または削除できませんでした。申請は送信できます。"
+    },
+    ru: {
+      remember: "Сохранить введённые данные на этом устройстве для следующей заявки",
+      notice: "При выборе данные этого сервера сохраняются при отправке только в этом браузере, без отдельного профиля на сервере. Согласия, подтверждение сервера, конфиденциальные данные и данные авторизации не сохраняются. Не выбирайте на общем устройстве.",
+      delete: "Удалить сохранённый профиль", deleted: "Сохранённый профиль для этого сервера удалён.",
+      unavailable: "Хранилище браузера недоступно: не удалось сохранить или удалить профиль. Заявку всё равно можно отправить."
+    }
+  };
+  const PROFILE_FIELDS = ["playerName", "tier", "alliance", "troopSize", "rallySize"];
+  const PROFILE_RADIOS = ["troop_type", "realtime_response", "captain_role", "participation_time"];
+  let profileStatusKey = "";
+  function profileKey() {
+    return serverCode ? "wkapplication-profile-v1:" + serverCode : null;
+  }
+  function renderProfileLanguage() {
+    const t = PROFILE_TEXT[language] || PROFILE_TEXT.en;
+    document.getElementById("rememberProfileText").textContent = t.remember;
+    document.getElementById("profileNotice").textContent = t.notice;
+    document.getElementById("deleteProfileButton").textContent = t.delete;
+    document.getElementById("profileStatus").textContent = t[profileStatusKey] || "";
+  }
+  function deleteSavedProfile() {
+    const key = profileKey();
+    const removed = key && deviceStorage.removeItem(key);
+    document.getElementById("rememberProfile").checked = false;
+    profileStatusKey = removed ? "deleted" : "unavailable";
+    renderProfileLanguage();
+  }
+  document.getElementById("deleteProfileButton").addEventListener("click", deleteSavedProfile);
+
+  function restoreSavedProfile() {
+    const key = profileKey();
+    if (!key) return;
+    let profile;
+    try { profile = JSON.parse(deviceStorage.getItem(key)); } catch { return; }
+    if (!profile || typeof profile !== "object" || Array.isArray(profile)) return;
+    for (const id of PROFILE_FIELDS) {
+      const value = profile[id];
+      if (typeof value !== "string") continue;
+      const input = document.getElementById(id);
+      if (input.tagName === "SELECT") {
+        if ([...input.options].some(option => option.value === value && !option.disabled)) input.value = value;
+      } else {
+        input.value = value.slice(0, id === "playerName" ? 100 : 32);
+      }
+    }
+    for (const name of PROFILE_RADIOS) {
+      // Compare values rather than interpolating stored data into selectors.
+      wkForm.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+        input.checked = input.value === profile[name];
+      });
+    }
+    document.getElementById("rememberProfile").checked = true;
+    updateParticipationState();
+    // Agreement and server confirmation inputs are deliberately never restored.
+  }
+  function persistProfileChoice() {
+    const key = profileKey();
+    if (!key) return;
+    let succeeded;
+    if (document.getElementById("rememberProfile").checked) {
+      const profile = {};
+      for (const id of PROFILE_FIELDS) profile[id] = document.getElementById(id).value;
+      for (const name of PROFILE_RADIOS) profile[name] = getCheckedValue(name);
+      succeeded = deviceStorage.setItem(key, JSON.stringify(profile));
+    } else {
+      succeeded = deviceStorage.removeItem(key);
+    }
+    profileStatusKey = succeeded ? "" : "unavailable";
+    renderProfileLanguage();
+  }
 
   function text() {
     return TEXT[language] || TEXT.ko;
@@ -2128,6 +2236,7 @@
 
 
   function renderLanguage() {
+    renderProfileLanguage();
 
     const t =
       text();
@@ -2339,7 +2448,7 @@
       landingLanguage = language;
 
 
-      localStorage.setItem(
+      deviceStorage.setItem(
         "wkapplication-language",
         language
       );
@@ -2507,6 +2616,7 @@
 
       if (!settings) throw new Error("SURVEY_SETTINGS_NOT_FOUND");
       renderLanguage();
+      restoreSavedProfile();
 
     } catch (error) {
       console.error(error);
@@ -2864,6 +2974,8 @@
 
       event.preventDefault();
       if (isSubmitting) return;
+
+      persistProfileChoice();
 
 
       setFormStatus();
