@@ -960,7 +960,7 @@
           "I can monitor and respond in real time.",
 
         monitor_unavailable:
-          "I cannot monitor in real time. I will participate in the second half only."
+          "Real-time monitoring is unavailable."
       },
 
       captainRoles: {
@@ -989,7 +989,7 @@
       },
 
       forcedSecondHalf:
-        "Because real-time monitoring is unavailable, Captain Role is fixed to Regular Participant and Participation Time to Second Half.",
+        "Because real-time monitoring is unavailable, the captain role is fixed to Regular Participant.",
 
       submit:
         "Submit",
@@ -1085,7 +1085,7 @@
           "실시간 모니터링 및 대응이 가능합니다.",
 
         monitor_unavailable:
-          "실시간 모니터링이 불가능하며 후반부에만 참여합니다."
+          "실시간 모니터링이 불가합니다."
       },
 
       captainRoles: {
@@ -1114,7 +1114,7 @@
       },
 
       forcedSecondHalf:
-        "실시간 모니터링이 불가능하므로 리더 역할은 일반 참여, 참여 시간은 후반부로 고정됩니다.",
+        "실시간 모니터링이 불가능하므로 리더 역할은 일반 참여로 고정됩니다.",
 
       submit:
         "제출",
@@ -1210,7 +1210,7 @@
           "リアルタイムで監視・対応できます。",
 
         monitor_unavailable:
-          "リアルタイム対応はできず、後半のみ参加します。"
+          "リアルタイムでのモニタリングはできません。"
       },
 
       captainRoles: {
@@ -1239,7 +1239,7 @@
       },
 
       forcedSecondHalf:
-        "リアルタイムで監視できないため、役割は一般参加、参加時間は後半に固定されます。",
+        "リアルタイムでのモニタリングができないため、リーダーの役割は一般参加に固定されます。",
 
       submit:
         "送信",
@@ -1335,7 +1335,7 @@
           "Могу находиться онлайн",
 
         monitor_unavailable:
-          "Не могу находиться онлайн — только вторая смена"
+          "Мониторинг в реальном времени недоступен."
       },
 
       captainRoles: {
@@ -1364,7 +1364,7 @@
       },
 
       forcedSecondHalf:
-        "Без мониторинга в реальном времени роль фиксируется как обычный участник, а время участия — только вторая половина.",
+        "Поскольку мониторинг в реальном времени недоступен, роль командира фиксируется как «Обычный участник».",
 
       submit:
         "Отправить",
@@ -1951,21 +1951,17 @@
 
 
   // =========================================================
-  // ORIGINAL WK PARTICIPATION BEHAVIOR
+  // WK PARTICIPATION BEHAVIOR
   // =========================================================
 
   function updateParticipationState() {
     const forced = getCheckedValue("realtime_response") === "monitor_unavailable";
-    for (const [name, requiredValue] of [
-      ["captain_role", "regular"],
-      ["participation_time", "second_half"]
-    ]) {
-      document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
-        if (forced) input.checked = input.value === requiredValue;
-        input.disabled = forced && input.value !== requiredValue;
-        input.closest(".choice")?.classList.toggle("disabled", input.disabled);
-      });
-    }
+    // Only the captain role is fixed; participation time stays user-selectable.
+    document.querySelectorAll('input[name="captain_role"]').forEach(input => {
+      if (forced) input.checked = input.value === "regular";
+      input.disabled = forced && input.value !== "regular";
+      input.closest(".choice")?.classList.toggle("disabled", input.disabled);
+    });
     const notice = document.getElementById("participationNotice");
     notice.textContent = forced ? text().forcedSecondHalf : "";
     notice.classList.toggle("hidden", !forced);
@@ -2874,8 +2870,7 @@
     if (
       realtime ===
         "monitor_unavailable" &&
-      (captainRole !== "regular" ||
-       participation !== "second_half")
+      captainRole !== "regular"
     ) {
 
       return {
