@@ -1627,6 +1627,34 @@
       unavailable: "Хранилище браузера недоступно: не удалось сохранить или удалить профиль. Заявку всё равно можно отправить."
     }
   };
+  const SIZE_FIELDS = ["troopSize", "rallySize"];
+  function formatSizeValue(value) {
+    return String(value ?? "").replace(/[^0-9]/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  function formatSizeInput(input) {
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const direction = input.selectionDirection;
+    const raw = input.value;
+    const digitsBefore = position => raw.slice(0, position).replace(/[^0-9]/g, "").length;
+    input.value = formatSizeValue(raw);
+    function caretPosition(count) {
+      if (!count) return 0;
+      let seen = 0;
+      for (let i = 0; i < input.value.length; i++) {
+        if (/[0-9]/.test(input.value[i]) && ++seen === count) return i + 1;
+      }
+      return input.value.length;
+    }
+    if (start !== null && end !== null) {
+      input.setSelectionRange(caretPosition(digitsBefore(start)), caretPosition(digitsBefore(end)), direction);
+    }
+  }
+  for (const id of SIZE_FIELDS) {
+    const input = document.getElementById(id);
+    input.addEventListener("input", () => formatSizeInput(input));
+    input.value = formatSizeValue(input.value);
+  }
   const PROFILE_FIELDS = ["playerName", "tier", "alliance", "troopSize", "rallySize"];
   const PROFILE_RADIOS = ["troop_type", "realtime_response", "captain_role", "participation_time"];
   let profileStatusKey = "";
@@ -1662,7 +1690,9 @@
       if (input.tagName === "SELECT") {
         if ([...input.options].some(option => option.value === value && !option.disabled)) input.value = value;
       } else {
-        input.value = value.slice(0, id === "playerName" ? 100 : 32);
+        input.value = SIZE_FIELDS.includes(id)
+          ? formatSizeValue(value.slice(0, 32))
+          : value.slice(0, id === "playerName" ? 100 : 32);
       }
     }
     for (const name of PROFILE_RADIOS) {
@@ -1676,17 +1706,16 @@
     // Agreement and server confirmation inputs are deliberately never restored.
   }
   function persistProfileChoice() {
+    if (!document.getElementById("rememberProfile").checked) return;
     const key = profileKey();
     if (!key) return;
-    let succeeded;
-    if (document.getElementById("rememberProfile").checked) {
-      const profile = {};
-      for (const id of PROFILE_FIELDS) profile[id] = document.getElementById(id).value;
-      for (const name of PROFILE_RADIOS) profile[name] = getCheckedValue(name);
-      succeeded = deviceStorage.setItem(key, JSON.stringify(profile));
-    } else {
-      succeeded = deviceStorage.removeItem(key);
+    const profile = {};
+    for (const id of PROFILE_FIELDS) {
+      const value = document.getElementById(id).value;
+      profile[id] = SIZE_FIELDS.includes(id) ? value.replace(/[^0-9]/g, "") : value;
     }
+    for (const name of PROFILE_RADIOS) profile[name] = getCheckedValue(name);
+    const succeeded = deviceStorage.setItem(key, JSON.stringify(profile));
     profileStatusKey = succeeded ? "" : "unavailable";
     renderProfileLanguage();
   }
