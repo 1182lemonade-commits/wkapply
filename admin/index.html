@@ -727,28 +727,7 @@
     </section>
 
 
-    <section id="serverManagementPanel" class="panel section hidden">
-      <div class="section-head">
-        <div>
-          <h2>서버 관리</h2>
-          <div id="serverManagementDescription" class="muted"></div>
-        </div>
-      </div>
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button id="toggleServerActiveButton" class="btn" type="button"></button>
-        <button id="deleteServerButton" class="btn btn-danger" type="button">
-          서버 영구 삭제
-        </button>
-      </div>
-
-      <div class="notice" style="margin-top:14px;margin-bottom:0;">
-        영구 삭제는 비활성화된 서버에서만 가능합니다. 삭제하면 해당 서버의 설정, 티어,
-        연맹, 동의항목, 신청 결과가 함께 삭제되며 복구할 수 없습니다.
-      </div>
-
-      <div id="serverManagementStatus" class="status"></div>
-    </section>
 
 
     <nav class="tabs">
@@ -1302,6 +1281,29 @@
         class="status"
       ></div>
 
+    </section>
+
+    <section id="serverManagementPanel" class="panel section hidden">
+      <div class="section-head">
+        <div>
+          <h2>서버 관리</h2>
+          <div id="serverManagementDescription" class="muted"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button id="toggleServerActiveButton" class="btn" type="button"></button>
+        <button id="deleteServerButton" class="btn btn-danger" type="button">
+          서버 영구 삭제
+        </button>
+      </div>
+
+      <div class="notice" style="margin-top:14px;margin-bottom:0;">
+        영구 삭제는 비활성화된 서버에서만 가능합니다. 삭제하면 해당 서버의 설정, 티어,
+        연맹, 동의항목, 신청 결과가 함께 삭제되며 복구할 수 없습니다.
+      </div>
+
+      <div id="serverManagementStatus" class="status"></div>
     </section>
 
   </main>
