@@ -1039,6 +1039,9 @@
       success:
         "Your application has been successfully submitted.",
 
+      resubmission:
+        "This is your resubmission #{count}.",
+
       loadFailed:
         "Failed to load the application form.",
 
@@ -1163,6 +1166,9 @@
 
       success:
         "신청이 성공적으로 제출되었습니다.",
+
+      resubmission:
+        "현재 {count}번째 재신청입니다.",
 
       loadFailed:
         "신청서를 불러오지 못했습니다.",
@@ -1289,6 +1295,9 @@
       success:
         "申請を正常に送信しました。",
 
+      resubmission:
+        "現在{count}回目の再申請です。",
+
       loadFailed:
         "申請フォームを読み込めませんでした。",
 
@@ -1413,6 +1422,9 @@
 
       success:
         "Заявка успешно отправлена.",
+
+      resubmission:
+        "Это повторная заявка №{count}.",
 
       loadFailed:
         "Не удалось загрузить форму.",
@@ -1765,6 +1777,12 @@
 
   function serverText(value) {
     return String(value ?? "").replaceAll("{server}", serverCode || "");
+  }
+
+
+  function resubmissionText(count) {
+    return String(text().resubmission ?? "")
+      .replaceAll("{count}", String(count));
   }
 
 
@@ -3144,13 +3162,27 @@
           );
 
 
-        await parseJsonResponse(
-          response
-        );
+        const result =
+          await parseJsonResponse(
+            response
+          );
+
+
+        const resubmissionCount =
+          Number(
+            result?.resubmissionCount
+          );
+
+
+        const successMessage =
+          Number.isInteger(resubmissionCount) &&
+          resubmissionCount > 0
+            ? text().success + " " + resubmissionText(resubmissionCount)
+            : text().success;
 
 
         setFormStatus(
-          text().success,
+          successMessage,
           "success"
         );
 
