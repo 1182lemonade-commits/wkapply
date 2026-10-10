@@ -2543,6 +2543,13 @@
         "gpAgreementFutureRestriction"
       ).checked = false;
 
+      setTimeout(
+        () => {
+          window.location.reload();
+        },
+        2000
+      );
+
     } catch (error) {
       console.error(error);
 
@@ -3356,6 +3363,13 @@
 
         document.getElementById("gpAgreementPurchaseRequired").checked = false;
         document.getElementById("gpAgreementFutureRestriction").checked = false;
+
+        setTimeout(
+          () => {
+            window.location.reload();
+          },
+          2000
+        );
 
       } catch (error) {
         console.error(error);
