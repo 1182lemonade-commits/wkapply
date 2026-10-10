@@ -1975,6 +1975,7 @@
   let groupPurchase = null;
   let groupPurchaseItems = [];
   let groupPurchaseSubmitting = false;
+  let groupPurchaseDataLoaded = false;
 
   const activeViewStorageKey =
     serverCode
@@ -3279,7 +3280,11 @@
       !hasGroupPurchase
     );
 
-    if (!hasGroupPurchase && activeView === "groupPurchase") {
+    if (
+      groupPurchaseDataLoaded &&
+      !hasGroupPurchase &&
+      activeView === "groupPurchase"
+    ) {
       activeView = "wk";
 
       if (activeViewStorageKey) {
@@ -3315,6 +3320,7 @@
   }
 
   async function loadGroupPurchaseData(serverId) {
+    groupPurchaseDataLoaded = false;
     groupPurchase = null;
     groupPurchaseItems = [];
 
@@ -3353,6 +3359,7 @@
       groupPurchaseItems = [];
     }
 
+    groupPurchaseDataLoaded = true;
     renderActiveView();
     applySavedProfileToGroupPurchase();
   }
