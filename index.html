@@ -2032,7 +2032,7 @@
     const parts = Array.isArray(message) ? message : [message];
     parts.forEach((part, index) => {
       if (index > 0) {
-        if (currentLanguage !== "ja") {
+        if (language !== "ja") {
           title.appendChild(document.createTextNode(" "));
         }
         title.appendChild(document.createElement("wbr"));
@@ -2069,7 +2069,7 @@
     };
 
     showServerPathMessage(
-      messages[currentLanguage] || messages.en
+      messages[language] || messages.en
     );
   }
 
@@ -2082,7 +2082,7 @@
     };
 
     showServerPathMessage(
-      messages[currentLanguage] || messages.en
+      messages[language] || messages.en
     );
   }
 
