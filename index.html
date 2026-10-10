@@ -118,6 +118,61 @@
       min-width: 6.25rem;
     }
 
+    .view-switch-button {
+      min-height: 2.875em;
+      padding: .65em .95em;
+      border: .0625rem solid var(--border);
+      border-radius: .625rem;
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .view-switch-button:hover {
+      border-color: var(--accent);
+    }
+
+    .view-switch-button:focus-visible {
+      outline: .125rem solid var(--accent);
+      outline-offset: .1875rem;
+    }
+
+    .gp-item-list {
+      display: grid;
+      gap: var(--space-small);
+    }
+
+    .gp-item-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(7rem, 9rem);
+      gap: var(--space-small);
+      align-items: center;
+      padding: .75em .85em;
+      border: .0625rem solid var(--border);
+      border-radius: .6875rem;
+    }
+
+    .gp-item-name {
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .gp-item-limit {
+      margin-top: .2rem;
+      color: var(--muted);
+      font-size: .8125rem;
+    }
+
+    .gp-item-row select {
+      width: 100%;
+    }
+
+    .gp-agreement-list {
+      display: grid;
+      gap: var(--space-small);
+    }
+
     .panel {
       background: var(--panel);
       border: 0.0625rem solid var(--border);
@@ -317,6 +372,15 @@
       .topbar {
         flex-wrap: wrap;
       }
+
+      .view-switch-button {
+        width: 100%;
+        order: 3;
+      }
+
+      .gp-item-row {
+        grid-template-columns: 1fr;
+      }
     }
   
     .server-landing {
@@ -425,6 +489,14 @@
 
     <div class="topbar">
 
+      <button
+        id="viewSwitchButton"
+        class="view-switch-button hidden"
+        type="button"
+      >
+        공동구매 신청
+      </button>
+
       <select id="languageSelect" aria-label="Language">
         <option value="ko">한국어</option>
         <option value="en">English</option>
@@ -441,7 +513,7 @@
     </div>
 
 
-    <section class="panel">
+    <section id="wkPanel" class="panel">
 
       <h1 id="pageTitle">
         WK 신청
@@ -738,6 +810,95 @@
 
     </section>
 
+    <section id="groupPurchasePanel" class="panel hidden">
+      <h1 id="gpTitle">공동구매 신청</h1>
+
+      <p id="gpIntro" class="intro">
+        구매할 상품 수량을 선택해 주세요.
+      </p>
+
+      <div
+        id="gpScheduleStatus"
+        class="survey-status"
+      >
+        Loading…
+      </div>
+
+      <form id="groupPurchaseForm" class="hidden" novalidate>
+        <div class="field">
+          <label id="gpPlayerNameLabel" class="label" for="gpPlayerName">
+            플레이어명
+            <span class="required">*</span>
+          </label>
+
+          <input
+            id="gpPlayerName"
+            type="text"
+            maxlength="100"
+            autocomplete="off"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <div id="gpItemsLabel" class="label">
+            상품
+            <span class="required">*</span>
+          </div>
+
+          <div id="gpItemList" class="gp-item-list"></div>
+        </div>
+
+        <div class="field">
+          <div id="gpAgreementTitle" class="label">
+            확인 및 동의
+          </div>
+
+          <div class="gp-agreement-list">
+            <label class="choice">
+              <input
+                id="gpAgreementPurchaseRequired"
+                type="checkbox"
+                required
+              >
+              <span id="gpAgreementPurchaseRequiredText"></span>
+            </label>
+
+            <label class="choice">
+              <input
+                id="gpAgreementFutureRestriction"
+                type="checkbox"
+                required
+              >
+              <span id="gpAgreementFutureRestrictionText"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="submit-row">
+          <button
+            id="gpSubmitButton"
+            class="submit-button"
+            type="submit"
+          >
+            제출
+          </button>
+        </div>
+
+        <div
+          id="gpFormStatus"
+          class="status-message"
+          role="status"
+          aria-live="polite"
+        ></div>
+      </form>
+
+      <div
+        id="gpUnavailableBox"
+        class="closed-box hidden"
+      ></div>
+    </section>
+
   </main>
 
 
@@ -869,6 +1030,10 @@
   const SUBMIT_URL =
     SUPABASE_URL +
     "/functions/v1/wk-submit";
+
+  const GROUP_PURCHASE_SUBMIT_URL =
+    SUPABASE_URL +
+    "/functions/v1/wk-group-purchase-submit";
 
 
   // =========================================================
@@ -1452,6 +1617,125 @@
     }
   };
 
+  const GROUP_PURCHASE_TEXT = {
+    ko: {
+      switchToGroupPurchase: "공동구매 신청",
+      switchToWk: "WK 신청",
+      title: "공동구매 신청",
+      intro: "구매할 상품 수량을 선택해 주세요.",
+      playerName: "플레이어명",
+      playerNamePlaceholder: "복붙해주세용😉",
+      items: "상품",
+      quantity: "수량",
+      maxQuantity: "최대 {count}개",
+      agreementTitle: "확인 및 동의",
+      agreementPurchaseRequired:
+        "참여할 경우 반드시 하나 이상의 상품을 구매해야 합니다. 예상치 못한 문제를 피하기 위해 쿠폰은 미리 구매해 두시기 바랍니다.",
+      agreementFutureRestriction:
+        "구매하지 않고 참여한 사실이 확인될 경우 향후 참여가 제한될 수 있습니다.",
+      voucher: "쿠폰",
+      submit: "제출",
+      submitting: "제출 중…",
+      open: "현재 공동구매 신청을 받고 있습니다.",
+      beforeOpen: "아직 공동구매 신청 시작 전입니다.",
+      closed: "현재 공동구매 신청 기간이 아닙니다.",
+      unavailable: "현재 신청 가능한 공동구매가 없습니다.",
+      required: "플레이어명, 상품 수량, 필수 동의 항목을 확인해 주세요.",
+      atLeastOne: "하나 이상의 상품 수량을 선택해 주세요.",
+      success: "공동구매 신청이 성공적으로 제출되었습니다.",
+      resubmission: "현재 {count}번째 재신청입니다.",
+      failed: "공동구매 신청 제출에 실패했습니다.",
+      loadFailed: "공동구매 정보를 불러오지 못했습니다."
+    },
+    en: {
+      switchToGroupPurchase: "Group Purchase",
+      switchToWk: "WK Application",
+      title: "Group Purchase",
+      intro: "Select the quantity you want for each item.",
+      playerName: "Player Name",
+      playerNamePlaceholder: "Please copy&paste😉",
+      items: "Items",
+      quantity: "Quantity",
+      maxQuantity: "Maximum {count}",
+      agreementTitle: "Confirmation & Agreement",
+      agreementPurchaseRequired:
+        "If you participate, you must purchase at least one item. To avoid unexpected issues, please purchase your vouchers in advance.",
+      agreementFutureRestriction:
+        "If you are found to have participated without making a purchase, you may be restricted from participating in future events.",
+      voucher: "Voucher",
+      submit: "Submit",
+      submitting: "Submitting…",
+      open: "Group purchase applications are currently open.",
+      beforeOpen: "Group purchase applications have not opened yet.",
+      closed: "Group purchase applications are currently closed.",
+      unavailable: "There is no group purchase available right now.",
+      required: "Please check the player name, item quantities, and required agreements.",
+      atLeastOne: "Please select at least one item.",
+      success: "Your group purchase application has been successfully submitted.",
+      resubmission: "This is your resubmission #{count}.",
+      failed: "Failed to submit the group purchase application.",
+      loadFailed: "Failed to load group purchase information."
+    },
+    ja: {
+      switchToGroupPurchase: "共同購入申請",
+      switchToWk: "WK申請",
+      title: "共同購入申請",
+      intro: "購入する商品の数量を選択してください。",
+      playerName: "名前",
+      playerNamePlaceholder: "コピペでお願いします。😉",
+      items: "商品",
+      quantity: "数量",
+      maxQuantity: "最大{count}個",
+      agreementTitle: "確認および同意",
+      agreementPurchaseRequired:
+        "参加する場合は、必ず1つ以上の商品を購入してください。予期せぬ問題を避けるため、金券は事前に購入しておいてください。",
+      agreementFutureRestriction:
+        "商品を購入せずに参加したことが確認された場合、今後のイベントへの参加が制限される可能性があります。",
+      voucher: "金券",
+      submit: "送信",
+      submitting: "送信中…",
+      open: "現在、共同購入申請を受け付けています。",
+      beforeOpen: "共同購入申請はまだ開始されていません。",
+      closed: "現在、共同購入申請期間ではありません。",
+      unavailable: "現在申請できる共同購入はありません。",
+      required: "名前、商品数量、必須の同意項目を確認してください。",
+      atLeastOne: "1つ以上の商品を選択してください。",
+      success: "共同購入申請を正常に送信しました。",
+      resubmission: "現在{count}回目の再申請です。",
+      failed: "共同購入申請の送信に失敗しました。",
+      loadFailed: "共同購入情報を読み込めませんでした。"
+    },
+    ru: {
+      switchToGroupPurchase: "Совместная покупка",
+      switchToWk: "Заявка WK",
+      title: "Совместная покупка",
+      intro: "Выберите количество для каждого товара.",
+      playerName: "Имя",
+      playerNamePlaceholder: "Скопируйте и вставьте, пожалуйста 😉))",
+      items: "Товары",
+      quantity: "Количество",
+      maxQuantity: "Максимум: {count}",
+      agreementTitle: "Подтверждение и согласие",
+      agreementPurchaseRequired:
+        "Для участия необходимо приобрести как минимум один товар. Чтобы избежать непредвиденных проблем, пожалуйста, приобретите ваучеры заранее.",
+      agreementFutureRestriction:
+        "Если будет установлено, что вы участвовали без покупки, ваше участие в будущих мероприятиях может быть ограничено.",
+      voucher: "Ваучер",
+      submit: "Отправить",
+      submitting: "Отправка…",
+      open: "Приём заявок на совместную покупку открыт.",
+      beforeOpen: "Приём заявок на совместную покупку ещё не начался.",
+      closed: "Приём заявок на совместную покупку сейчас закрыт.",
+      unavailable: "Сейчас нет доступной совместной покупки.",
+      required: "Проверьте имя, количество товаров и обязательные согласия.",
+      atLeastOne: "Выберите хотя бы один товар.",
+      success: "Заявка на совместную покупку успешно отправлена.",
+      resubmission: "Это повторная заявка №{count}.",
+      failed: "Не удалось отправить заявку на совместную покупку.",
+      loadFailed: "Не удалось загрузить информацию о совместной покупке."
+    }
+  };
+
 
   // =========================================================
   // SERVER FROM URL
@@ -1577,6 +1861,11 @@
   let alliances = [];
   let agreements = [];
 
+  let groupPurchase = null;
+  let groupPurchaseItems = [];
+  let groupPurchaseSubmitting = false;
+  let activeView = "wk";
+
 
   // =========================================================
   // ELEMENTS
@@ -1610,6 +1899,31 @@
   const submitButton =
     document.getElementById(
       "submitButton"
+    );
+
+  const wkPanel =
+    document.getElementById(
+      "wkPanel"
+    );
+
+  const groupPurchasePanel =
+    document.getElementById(
+      "groupPurchasePanel"
+    );
+
+  const viewSwitchButton =
+    document.getElementById(
+      "viewSwitchButton"
+    );
+
+  const groupPurchaseForm =
+    document.getElementById(
+      "groupPurchaseForm"
+    );
+
+  const gpSubmitButton =
+    document.getElementById(
+      "gpSubmitButton"
     );
 
 
@@ -1906,6 +2220,443 @@
       )?.value || ""
     );
   }
+
+
+  // =========================================================
+  // GROUP PURCHASE
+  // =========================================================
+
+  function groupPurchaseText() {
+    return GROUP_PURCHASE_TEXT[language] || GROUP_PURCHASE_TEXT.en;
+  }
+
+  function localizedGroupPurchaseTitle() {
+    if (!groupPurchase) return groupPurchaseText().title;
+
+    const field = "title_" + language;
+    return groupPurchase[field] || groupPurchase.title_en || groupPurchaseText().title;
+  }
+
+  function groupPurchaseScheduleState(now = Date.now()) {
+    if (!groupPurchase) {
+      return { state: "unavailable", isOpen: false };
+    }
+
+    const startsAt = new Date(groupPurchase.starts_at).getTime();
+    const closesAt = new Date(groupPurchase.closes_at).getTime();
+
+    if (!Number.isFinite(startsAt) || !Number.isFinite(closesAt)) {
+      return { state: "unavailable", isOpen: false };
+    }
+
+    if (now < startsAt) {
+      return { state: "beforeOpen", isOpen: false };
+    }
+
+    if (now >= closesAt) {
+      return { state: "closed", isOpen: false };
+    }
+
+    return { state: "open", isOpen: true };
+  }
+
+  function savedProfilePlayerName() {
+    const key = profileKey();
+    if (!key) return "";
+
+    try {
+      const profile = JSON.parse(deviceStorage.getItem(key) || "null");
+      return (
+        profile &&
+        typeof profile === "object" &&
+        !Array.isArray(profile) &&
+        typeof profile.playerName === "string"
+      )
+        ? profile.playerName
+        : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function setGroupPurchaseStatus(message = "", type = "") {
+    const element = document.getElementById("gpFormStatus");
+    element.textContent = message;
+    element.className =
+      "status-message" +
+      (type ? " " + type : "");
+  }
+
+  function renderGroupPurchaseItems() {
+    const container = document.getElementById("gpItemList");
+    container.innerHTML = "";
+
+    for (const item of groupPurchaseItems) {
+      const row = document.createElement("div");
+      row.className = "gp-item-row";
+
+      const info = document.createElement("div");
+
+      const name = document.createElement("div");
+      name.className = "gp-item-name";
+      name.textContent =
+        `${item.voucher_price} ${groupPurchaseText().voucher}`;
+
+      const limit = document.createElement("div");
+      limit.className = "gp-item-limit";
+      limit.textContent =
+        groupPurchaseText().maxQuantity.replaceAll(
+          "{count}",
+          String(item.max_quantity)
+        );
+
+      info.appendChild(name);
+      info.appendChild(limit);
+
+      const select = document.createElement("select");
+      select.dataset.groupPurchaseItemId = String(item.id);
+      select.setAttribute(
+        "aria-label",
+        `${item.voucher_price} ${groupPurchaseText().voucher} ${groupPurchaseText().quantity}`
+      );
+
+      for (let quantity = 0; quantity <= Number(item.max_quantity); quantity += 1) {
+        const option = document.createElement("option");
+        option.value = String(quantity);
+        option.textContent = String(quantity);
+        select.appendChild(option);
+      }
+
+      row.appendChild(info);
+      row.appendChild(select);
+      container.appendChild(row);
+    }
+  }
+
+  function renderGroupPurchaseState() {
+    const t = groupPurchaseText();
+    const state = groupPurchaseScheduleState();
+
+    const scheduleStatus =
+      document.getElementById("gpScheduleStatus");
+
+    const unavailableBox =
+      document.getElementById("gpUnavailableBox");
+
+    if (state.state === "open") {
+      scheduleStatus.textContent = t.open;
+      scheduleStatus.className = "survey-status open";
+      groupPurchaseForm.classList.remove("hidden");
+      unavailableBox.classList.add("hidden");
+    } else {
+      const message =
+        state.state === "beforeOpen"
+          ? t.beforeOpen
+          : state.state === "closed"
+            ? t.closed
+            : t.unavailable;
+
+      scheduleStatus.textContent = message;
+      scheduleStatus.className = "survey-status closed";
+
+      groupPurchaseForm.classList.add("hidden");
+      unavailableBox.textContent = message;
+      unavailableBox.classList.remove("hidden");
+    }
+  }
+
+  function renderGroupPurchaseLanguage() {
+    const t = groupPurchaseText();
+
+    viewSwitchButton.textContent =
+      activeView === "groupPurchase"
+        ? t.switchToWk
+        : t.switchToGroupPurchase;
+
+    document.getElementById("gpTitle").textContent =
+      localizedGroupPurchaseTitle();
+
+    document.getElementById("gpIntro").textContent =
+      t.intro;
+
+    setLabelText(
+      "gpPlayerNameLabel",
+      t.playerName
+    );
+
+    document.getElementById("gpPlayerName").placeholder =
+      t.playerNamePlaceholder;
+
+    setLabelText(
+      "gpItemsLabel",
+      t.items
+    );
+
+    document.getElementById("gpAgreementTitle").textContent =
+      t.agreementTitle;
+
+    document.getElementById("gpAgreementPurchaseRequiredText").textContent =
+      t.agreementPurchaseRequired;
+
+    document.getElementById("gpAgreementFutureRestrictionText").textContent =
+      t.agreementFutureRestriction;
+
+    gpSubmitButton.textContent =
+      groupPurchaseSubmitting
+        ? t.submitting
+        : t.submit;
+
+    renderGroupPurchaseItems();
+    renderGroupPurchaseState();
+
+    if (activeView === "groupPurchase") {
+      document.title =
+        (serverCode ? "S" + serverCode + " " : "") +
+        localizedGroupPurchaseTitle();
+    }
+  }
+
+  function renderActiveView() {
+    const hasGroupPurchase = Boolean(groupPurchase);
+
+    viewSwitchButton.classList.toggle(
+      "hidden",
+      !hasGroupPurchase
+    );
+
+    if (!hasGroupPurchase && activeView === "groupPurchase") {
+      activeView = "wk";
+    }
+
+    const showGroupPurchase =
+      activeView === "groupPurchase" &&
+      hasGroupPurchase;
+
+    wkPanel.classList.toggle(
+      "hidden",
+      showGroupPurchase
+    );
+
+    groupPurchasePanel.classList.toggle(
+      "hidden",
+      !showGroupPurchase
+    );
+
+    renderGroupPurchaseLanguage();
+
+    if (!showGroupPurchase) {
+      const t = text();
+      document.title =
+        (serverCode ? "S" + serverCode + " " : "") +
+        t.title;
+    }
+  }
+
+  async function loadGroupPurchaseData(serverId) {
+    groupPurchase = null;
+    groupPurchaseItems = [];
+
+    try {
+      const purchaseRows = await restGet(
+        "group_purchases" +
+        "?select=id,server_id,title_ko,title_en,title_ja,title_ru,is_active,starts_at,closes_at" +
+        "&server_id=eq." + serverId +
+        "&is_active=eq.true" +
+        "&order=id.desc" +
+        "&limit=1"
+      );
+
+      groupPurchase =
+        Array.isArray(purchaseRows)
+          ? (purchaseRows[0] || null)
+          : null;
+
+      if (groupPurchase) {
+        const itemRows = await restGet(
+          "group_purchase_items" +
+          "?select=id,group_purchase_id,voucher_price,max_quantity,sort_order,is_active" +
+          "&group_purchase_id=eq." + Number(groupPurchase.id) +
+          "&is_active=eq.true" +
+          "&order=sort_order.asc,id.asc"
+        );
+
+        groupPurchaseItems =
+          Array.isArray(itemRows)
+            ? itemRows
+            : [];
+      }
+    } catch (error) {
+      console.error("group purchase load error:", error);
+      groupPurchase = null;
+      groupPurchaseItems = [];
+    }
+
+    renderActiveView();
+  }
+
+  viewSwitchButton.addEventListener(
+    "click",
+    () => {
+      if (!groupPurchase) return;
+
+      activeView =
+        activeView === "groupPurchase"
+          ? "wk"
+          : "groupPurchase";
+
+      if (activeView === "groupPurchase") {
+        const playerName =
+          document.getElementById("gpPlayerName");
+
+        if (!playerName.value) {
+          playerName.value =
+            savedProfilePlayerName();
+        }
+      }
+
+      setGroupPurchaseStatus();
+      renderActiveView();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  );
+
+  groupPurchaseForm.addEventListener(
+    "submit",
+    async event => {
+      event.preventDefault();
+
+      if (groupPurchaseSubmitting) return;
+
+      const t = groupPurchaseText();
+      const state = groupPurchaseScheduleState();
+
+      if (!state.isOpen) {
+        setGroupPurchaseStatus(t.closed, "error");
+        return;
+      }
+
+      const playerName =
+        document.getElementById("gpPlayerName").value;
+
+      if (
+        playerName.length < 1 ||
+        playerName.length > 100 ||
+        playerName.trim().length === 0
+      ) {
+        setGroupPurchaseStatus(t.required, "error");
+        return;
+      }
+
+      if (
+        !document.getElementById("gpAgreementPurchaseRequired").checked ||
+        !document.getElementById("gpAgreementFutureRestriction").checked
+      ) {
+        setGroupPurchaseStatus(t.required, "error");
+        return;
+      }
+
+      const items = [];
+
+      document
+        .querySelectorAll("[data-group-purchase-item-id]")
+        .forEach(select => {
+          const quantity = Number(select.value);
+          const itemId = Number(select.dataset.groupPurchaseItemId);
+
+          if (
+            Number.isSafeInteger(itemId) &&
+            itemId > 0 &&
+            Number.isSafeInteger(quantity) &&
+            quantity > 0
+          ) {
+            items.push({
+              item_id: itemId,
+              quantity
+            });
+          }
+        });
+
+      if (!items.length) {
+        setGroupPurchaseStatus(t.atLeastOne, "error");
+        return;
+      }
+
+      groupPurchaseSubmitting = true;
+      gpSubmitButton.disabled = true;
+      gpSubmitButton.textContent = t.submitting;
+      setGroupPurchaseStatus();
+
+      try {
+        const response = await fetch(
+          GROUP_PURCHASE_SUBMIT_URL,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: SUPABASE_KEY,
+              Authorization: "Bearer " + SUPABASE_KEY
+            },
+            body: JSON.stringify({
+              server_code: serverCode,
+              player_name: playerName,
+              items,
+              agreement_purchase_required: true,
+              agreement_future_restriction: true
+            })
+          }
+        );
+
+        const result =
+          await parseJsonResponse(response);
+
+        const resubmissionCount =
+          Number(result?.resubmissionCount);
+
+        const message =
+          Number.isInteger(resubmissionCount) &&
+          resubmissionCount > 0
+            ? t.success + " " +
+              t.resubmission.replaceAll(
+                "{count}",
+                String(resubmissionCount)
+              )
+            : t.success;
+
+        setGroupPurchaseStatus(
+          message,
+          "success"
+        );
+
+        document
+          .querySelectorAll("[data-group-purchase-item-id]")
+          .forEach(select => {
+            select.value = "0";
+          });
+
+        document.getElementById("gpAgreementPurchaseRequired").checked = false;
+        document.getElementById("gpAgreementFutureRestriction").checked = false;
+
+      } catch (error) {
+        console.error(error);
+
+        let message = t.failed;
+
+        if (error.message === "GROUP_PURCHASE_NOT_OPEN") {
+          message = t.closed;
+        }
+
+        setGroupPurchaseStatus(
+          message,
+          "error"
+        );
+
+      } finally {
+        groupPurchaseSubmitting = false;
+        gpSubmitButton.disabled = false;
+        gpSubmitButton.textContent = t.submit;
+      }
+    }
+  );
 
 
   // =========================================================
@@ -2541,6 +3292,8 @@
 
     renderSurveyState();
 
+    renderActiveView();
+
   }
 
 
@@ -2740,6 +3493,7 @@
       if (!settings) throw new Error("SURVEY_SETTINGS_NOT_FOUND");
       renderLanguage();
       restoreSavedProfile();
+      await loadGroupPurchaseData(serverId);
 
     } catch (error) {
       console.error(error);
@@ -2748,6 +3502,9 @@
       tiers = [];
       alliances = [];
       agreements = [];
+      groupPurchase = null;
+      groupPurchaseItems = [];
+      renderActiveView();
       surveyStatus.textContent = text().loadFailed;
       surveyStatus.className = "survey-status closed";
       closedBox.textContent = text().loadFailed;
@@ -3268,9 +4025,16 @@
     loadData();
   }
 
-  setInterval(renderSurveyState, 1000);
+  setInterval(() => {
+    renderSurveyState();
+    if (groupPurchase) renderGroupPurchaseState();
+  }, 1000);
+
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) renderSurveyState();
+    if (!document.hidden) {
+      renderSurveyState();
+      if (groupPurchase) renderGroupPurchaseState();
+    }
   });
 
 </script>
