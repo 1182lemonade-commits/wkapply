@@ -511,6 +511,64 @@
       margin-bottom:14px;
     }
 
+    .gp-create-grid,
+    .gp-title-grid,
+    .gp-schedule-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .gp-card {
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+      margin-top:14px;
+    }
+
+    .gp-card:first-child {
+      margin-top:0;
+    }
+
+    .gp-meta {
+      display:flex;
+      gap:8px 16px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:13px;
+      margin:8px 0 14px;
+    }
+
+    .gp-actions,
+    .gp-item-actions {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .gp-item-row {
+      display:grid;
+      grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) 90px auto auto;
+      gap:8px;
+      align-items:end;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      margin-top:8px;
+    }
+
+    .gp-subsection {
+      margin-top:20px;
+      padding-top:16px;
+      border-top:1px solid var(--border);
+    }
+
+    .gp-order-items {
+      white-space:normal;
+      min-width:240px;
+    }
+
     @media(max-width:760px) {
       .page {
         width:min(100% - 14px,1180px);
@@ -537,7 +595,11 @@
       .server-bar,
       .server-create-grid,
       .server-create-schedule,
-      .schedule-grid {
+      .schedule-grid,
+      .gp-create-grid,
+      .gp-title-grid,
+      .gp-schedule-grid,
+      .gp-item-row {
         grid-template-columns:1fr;
       }
 
@@ -744,6 +806,13 @@
         data-tab="applications"
       >
         응답
+      </button>
+
+      <button
+        class="tab"
+        data-tab="group-purchase"
+      >
+        공동구매
       </button>
 
       <button
@@ -1132,6 +1201,79 @@
     </section>
 
 
+    <!-- GROUP PURCHASE -->
+    <section
+      id="tab-group-purchase"
+      class="tab-panel hidden"
+    >
+      <div class="panel section">
+        <div class="section-head">
+          <div>
+            <h2>공동구매 관리</h2>
+            <div class="muted">
+              선택한 서버의 공동구매 일정, 제목, 상품과 신청 내역을 관리합니다.
+              영어 제목은 필수이며 다른 언어 제목이 비어 있으면 공개 화면에서 영어 제목을 사용합니다.
+            </div>
+          </div>
+        </div>
+
+        <div class="gp-title-grid">
+          <div class="field">
+            <label for="newGpTitleKo">한국어 제목</label>
+            <input id="newGpTitleKo" type="text" maxlength="500">
+          </div>
+          <div class="field">
+            <label for="newGpTitleEn">English 제목 *</label>
+            <input id="newGpTitleEn" type="text" maxlength="500" required>
+          </div>
+          <div class="field">
+            <label for="newGpTitleJa">日本語 제목</label>
+            <input id="newGpTitleJa" type="text" maxlength="500">
+          </div>
+          <div class="field">
+            <label for="newGpTitleRu">Русский 제목</label>
+            <input id="newGpTitleRu" type="text" maxlength="500">
+          </div>
+        </div>
+
+        <div class="gp-schedule-grid" style="margin-top:12px;">
+          <div class="field">
+            <label for="newGpStartsAt">시작 일시 *</label>
+            <input id="newGpStartsAt" type="datetime-local">
+          </div>
+          <div class="field">
+            <label for="newGpClosesAt">마감 일시 *</label>
+            <input id="newGpClosesAt" type="datetime-local">
+          </div>
+        </div>
+
+        <div class="gp-actions" style="margin-top:12px;">
+          <label class="checkbox-label">
+            <input id="newGpIsActive" type="checkbox" checked>
+            활성
+          </label>
+          <button id="createGroupPurchaseButton" class="btn btn-primary" type="button">
+            공동구매 생성
+          </button>
+        </div>
+
+        <div id="groupPurchaseStatus" class="status"></div>
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div>
+            <h2>공동구매 목록</h2>
+            <div class="muted">
+              마감된 공동구매도 자동 삭제 전까지 표시됩니다.
+            </div>
+          </div>
+        </div>
+        <div id="groupPurchaseList"></div>
+      </div>
+    </section>
+
+
     <!-- TIERS -->
     <section
       id="tab-tiers"
@@ -1359,7 +1501,8 @@
     applications:[],
     applicationChanges:[],
     emailRecipients:[],
-    emailDeliveryLogs:[]
+    emailDeliveryLogs:[],
+    groupPurchases:[]
   };
 
   let selectedApplicationCycleNumber = null;
@@ -1651,7 +1794,8 @@
       applications:[],
     applicationChanges:[],
       emailRecipients:[],
-      emailDeliveryLogs:[]
+      emailDeliveryLogs:[],
+      groupPurchases:[]
     };
 
     renderAll();
@@ -1966,6 +2110,7 @@
       adminData.applications = adminData.applications || [];
       adminData.emailRecipients = adminData.emailRecipients || [];
       adminData.emailDeliveryLogs = adminData.emailDeliveryLogs || [];
+      adminData.groupPurchases = adminData.groupPurchases || [];
 
       renderAll();
 
@@ -2060,6 +2205,37 @@
 
         if (error.message === "EMAIL_RECIPIENT_NOT_FOUND") {
           message = "이메일 수신자 정보를 찾을 수 없습니다.";
+        }
+
+        if (error.message === "GROUP_PURCHASE_TITLE_EN_REQUIRED") {
+          message = "공동구매 English 제목을 입력하세요.";
+        }
+
+        if (
+          error.message === "INVALID_GROUP_PURCHASE_SCHEDULE" ||
+          error.message === "GROUP_PURCHASE_CLOSE_MUST_BE_AFTER_START"
+        ) {
+          message = "공동구매 시작·마감 일시를 확인하세요. 마감은 시작 이후여야 합니다.";
+        }
+
+        if (error.message === "ACTIVE_GROUP_PURCHASE_EXISTS") {
+          message = "이 서버에는 이미 활성 공동구매가 있습니다. 기존 공동구매를 비활성화한 뒤 다시 시도하세요.";
+        }
+
+        if (error.message === "GROUP_PURCHASE_ALREADY_EMAILED") {
+          message = "이미 마감 이메일 발송이 완료된 공동구매는 다시 활성화할 수 없습니다.";
+        }
+
+        if (error.message === "INVALID_VOUCHER_PRICE") {
+          message = "쿠폰 가격은 1 이상의 정수로 입력하세요.";
+        }
+
+        if (error.message === "INVALID_MAX_QUANTITY") {
+          message = "최대 구매 수량은 1 이상의 정수로 입력하세요.";
+        }
+
+        if (error.message === "GROUP_PURCHASE_ITEM_IN_USE") {
+          message = "이미 신청 내역에서 사용된 상품은 삭제할 수 없습니다. 필요하면 비활성화하세요.";
         }
 
         setStatus(statusId, message, "error");
@@ -3437,6 +3613,744 @@
 
 
   // =========================================================
+  // GROUP PURCHASE
+  // =========================================================
+
+  function optionalTitleValue(id) {
+    const value = document.getElementById(id).value.trim();
+    return value || null;
+  }
+
+  function groupPurchaseStateText(item) {
+    if (item.email_sent_at) return "이메일 발송 완료";
+    if (item.is_active !== true) return "비활성";
+
+    const now = Date.now();
+    const start = item.starts_at ? new Date(item.starts_at).getTime() : NaN;
+    const close = item.closes_at ? new Date(item.closes_at).getTime() : NaN;
+
+    if (Number.isFinite(start) && now < start) return "시작 전";
+    if (Number.isFinite(close) && now >= close) return "마감";
+    return "진행 중";
+  }
+
+  function groupPurchaseOrderSummary(order) {
+    const rows = Array.isArray(order.items) ? order.items : [];
+
+    return rows.map(row => {
+      const price = Number(row?.item?.voucher_price);
+      const quantity = Number(row?.quantity);
+
+      const priceText =
+        Number.isSafeInteger(price) && price > 0
+          ? String(price)
+          : "?";
+
+      const quantityText =
+        Number.isSafeInteger(quantity) && quantity > 0
+          ? String(quantity)
+          : "?";
+
+      return `${priceText} Voucher × ${quantityText}`;
+    }).join(", ");
+  }
+
+  function downloadGroupPurchaseExcel(purchase) {
+    if (typeof XLSX === "undefined") {
+      setStatus(
+        "groupPurchaseStatus",
+        "Excel 라이브러리를 불러오지 못했습니다.",
+        "error"
+      );
+      return;
+    }
+
+    const orders = Array.isArray(purchase.orders)
+      ? purchase.orders
+      : [];
+
+    if (!orders.length) {
+      setStatus(
+        "groupPurchaseStatus",
+        "다운로드할 공동구매 신청 내역이 없습니다.",
+        "error"
+      );
+      return;
+    }
+
+    const activeItems = Array.isArray(purchase.items)
+      ? [...purchase.items].sort(
+          (a, b) =>
+            (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0) ||
+            (Number(a.id) || 0) - (Number(b.id) || 0)
+        )
+      : [];
+
+    const rows = orders.map(order => {
+      const quantities = new Map(
+        (Array.isArray(order.items) ? order.items : [])
+          .map(row => [Number(row.group_purchase_item_id), Number(row.quantity)])
+      );
+
+      const result = {
+        "Player Name": order.player_name ?? "",
+        "Submission Count": Number(order.submission_count) || 1,
+        "Resubmission Count": Math.max((Number(order.submission_count) || 1) - 1, 0),
+        "Updated At": order.updated_at
+          ? new Date(order.updated_at).toLocaleString("en-GB")
+          : "",
+      };
+
+      for (const item of activeItems) {
+        result[`${item.voucher_price} Voucher`] =
+          quantities.get(Number(item.id)) || 0;
+      }
+
+      return result;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Group Purchase"
+    );
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(
+      workbook,
+      `S${selectedServerCode}-Group-Purchase-${purchase.id}-${stamp}.xlsx`
+    );
+
+    setStatus(
+      "groupPurchaseStatus",
+      "공동구매 신청 내역 Excel 파일을 다운로드했습니다.",
+      "success"
+    );
+  }
+
+  function renderGroupPurchases() {
+    const container =
+      document.getElementById("groupPurchaseList");
+
+    const createButton =
+      document.getElementById("createGroupPurchaseButton");
+
+    const createInputs = [
+      "newGpTitleKo",
+      "newGpTitleEn",
+      "newGpTitleJa",
+      "newGpTitleRu",
+      "newGpStartsAt",
+      "newGpClosesAt",
+      "newGpIsActive"
+    ].map(id => document.getElementById(id));
+
+    if (!selectedServerCode) {
+      container.innerHTML =
+        '<div class="empty">먼저 관리할 서버를 선택하세요.</div>';
+
+      createButton.disabled = true;
+      createInputs.forEach(input => {
+        input.disabled = true;
+      });
+      return;
+    }
+
+    createButton.disabled = false;
+    createInputs.forEach(input => {
+      input.disabled = false;
+    });
+
+    const purchases =
+      Array.isArray(adminData.groupPurchases)
+        ? adminData.groupPurchases
+        : [];
+
+    if (!purchases.length) {
+      container.innerHTML =
+        '<div class="empty">등록된 공동구매가 없습니다.</div>';
+      return;
+    }
+
+    container.innerHTML = "";
+
+    for (const purchase of purchases) {
+      const card = document.createElement("div");
+      card.className = "gp-card";
+
+      const title =
+        purchase.title_ko ||
+        purchase.title_en ||
+        "공동구매";
+
+      const orderCount =
+        Array.isArray(purchase.orders)
+          ? purchase.orders.length
+          : 0;
+
+      card.innerHTML = `
+        <div class="section-head">
+          <div>
+            <h3 style="margin:0;">
+              ${escapeHtml(title)}
+            </h3>
+            <div class="gp-meta">
+              <span>#${escapeHtml(purchase.id)}</span>
+              <span>${escapeHtml(groupPurchaseStateText(purchase))}</span>
+              <span>신청 ${orderCount}건</span>
+              ${
+                purchase.email_sent_at
+                  ? `<span>이메일 ${escapeHtml(new Date(purchase.email_sent_at).toLocaleString("ko-KR"))}</span>`
+                  : ""
+              }
+              ${
+                purchase.purge_after_at
+                  ? `<span>삭제 예정 ${escapeHtml(new Date(purchase.purge_after_at).toLocaleString("ko-KR"))}</span>`
+                  : ""
+              }
+            </div>
+          </div>
+          <button class="btn download-gp-excel" type="button">
+            신청 Excel 다운로드
+          </button>
+        </div>
+
+        <div class="gp-title-grid">
+          <div class="field">
+            <label>한국어 제목</label>
+            <input class="gp-title-ko" type="text" maxlength="500"
+              value="${escapeHtml(purchase.title_ko || "")}">
+          </div>
+          <div class="field">
+            <label>English 제목 *</label>
+            <input class="gp-title-en" type="text" maxlength="500"
+              value="${escapeHtml(purchase.title_en || "")}">
+          </div>
+          <div class="field">
+            <label>日本語 제목</label>
+            <input class="gp-title-ja" type="text" maxlength="500"
+              value="${escapeHtml(purchase.title_ja || "")}">
+          </div>
+          <div class="field">
+            <label>Русский 제목</label>
+            <input class="gp-title-ru" type="text" maxlength="500"
+              value="${escapeHtml(purchase.title_ru || "")}">
+          </div>
+        </div>
+
+        <div class="gp-schedule-grid" style="margin-top:12px;">
+          <div class="field">
+            <label>시작 일시 *</label>
+            <input class="gp-starts-at" type="datetime-local"
+              value="${escapeHtml(toDateTimeLocal(purchase.starts_at))}">
+          </div>
+          <div class="field">
+            <label>마감 일시 *</label>
+            <input class="gp-closes-at" type="datetime-local"
+              value="${escapeHtml(toDateTimeLocal(purchase.closes_at))}">
+          </div>
+        </div>
+
+        <div class="gp-actions">
+          <label class="checkbox-label">
+            <input class="gp-active" type="checkbox"
+              ${purchase.is_active === true ? "checked" : ""}>
+            활성
+          </label>
+          <button class="btn btn-primary save-gp" type="button">
+            공동구매 저장
+          </button>
+          <button class="btn btn-danger delete-gp" type="button">
+            공동구매 영구 삭제
+          </button>
+        </div>
+
+        <div class="gp-subsection gp-items-section">
+          <div class="section-head">
+            <div>
+              <h3>상품</h3>
+              <div class="muted">
+                쿠폰 가격과 1인 최대 구매 수량을 설정합니다.
+              </div>
+            </div>
+          </div>
+
+          <div class="gp-new-item gp-item-row">
+            <div class="field">
+              <label>쿠폰 가격</label>
+              <input class="new-gp-item-price" type="number" min="1" step="1">
+            </div>
+            <div class="field">
+              <label>최대 수량</label>
+              <input class="new-gp-item-max" type="number" min="1" step="1">
+            </div>
+            <div class="field">
+              <label>순서</label>
+              <input class="new-gp-item-order" type="number" value="0">
+            </div>
+            <label class="checkbox-label">
+              <input class="new-gp-item-active" type="checkbox" checked>
+              활성
+            </label>
+            <button class="btn btn-primary add-gp-item" type="button">
+              상품 추가
+            </button>
+          </div>
+
+          <div class="gp-items-list"></div>
+        </div>
+
+        <div class="gp-subsection">
+          <div class="section-head">
+            <div>
+              <h3>신청 내역</h3>
+              <div class="muted">
+                같은 닉네임 재신청은 submission count가 증가하며 최종 신청 내용이 표시됩니다.
+              </div>
+            </div>
+          </div>
+          <div class="gp-orders-list"></div>
+        </div>
+      `;
+
+      card.querySelector(".download-gp-excel")
+        .addEventListener("click", () => {
+          downloadGroupPurchaseExcel(purchase);
+        });
+
+      card.querySelector(".save-gp")
+        .addEventListener("click", async event => {
+          const button = event.currentTarget;
+
+          const titleEn =
+            card.querySelector(".gp-title-en").value.trim();
+
+          const startValue =
+            card.querySelector(".gp-starts-at").value;
+
+          const closeValue =
+            card.querySelector(".gp-closes-at").value;
+
+          if (!titleEn) {
+            setStatus(
+              "groupPurchaseStatus",
+              "English 제목을 입력하세요.",
+              "error"
+            );
+            return;
+          }
+
+          if (
+            !startValue ||
+            !closeValue ||
+            new Date(closeValue).getTime() <=
+              new Date(startValue).getTime()
+          ) {
+            setStatus(
+              "groupPurchaseStatus",
+              "시작·마감 일시를 확인하세요. 마감은 시작 이후여야 합니다.",
+              "error"
+            );
+            return;
+          }
+
+          button.disabled = true;
+
+          try {
+            await action(
+              {
+                action:"update_group_purchase",
+                id:purchase.id,
+                title_ko:
+                  card.querySelector(".gp-title-ko").value.trim() || null,
+                title_en:titleEn,
+                title_ja:
+                  card.querySelector(".gp-title-ja").value.trim() || null,
+                title_ru:
+                  card.querySelector(".gp-title-ru").value.trim() || null,
+                starts_at:new Date(startValue).toISOString(),
+                closes_at:new Date(closeValue).toISOString(),
+                is_active:
+                  card.querySelector(".gp-active").checked
+              },
+              "groupPurchaseStatus"
+            );
+          } finally {
+            button.disabled = false;
+          }
+        });
+
+      card.querySelector(".delete-gp")
+        .addEventListener("click", async event => {
+          if (
+            !confirm(
+              "이 공동구매와 상품, 신청 내역을 모두 영구 삭제할까요?"
+            )
+          ) {
+            return;
+          }
+
+          const button = event.currentTarget;
+          button.disabled = true;
+
+          try {
+            await action(
+              {
+                action:"delete_group_purchase",
+                id:purchase.id
+              },
+              "groupPurchaseStatus"
+            );
+          } finally {
+            button.disabled = false;
+          }
+        });
+
+      card.querySelector(".add-gp-item")
+        .addEventListener("click", async event => {
+          const price =
+            Number(card.querySelector(".new-gp-item-price").value);
+
+          const maxQuantity =
+            Number(card.querySelector(".new-gp-item-max").value);
+
+          if (
+            !Number.isSafeInteger(price) ||
+            price < 1 ||
+            !Number.isSafeInteger(maxQuantity) ||
+            maxQuantity < 1
+          ) {
+            setStatus(
+              "groupPurchaseStatus",
+              "쿠폰 가격과 최대 수량을 1 이상의 정수로 입력하세요.",
+              "error"
+            );
+            return;
+          }
+
+          const button = event.currentTarget;
+          button.disabled = true;
+
+          try {
+            await action(
+              {
+                action:"create_group_purchase_item",
+                group_purchase_id:purchase.id,
+                voucher_price:price,
+                max_quantity:maxQuantity,
+                sort_order:
+                  Number(card.querySelector(".new-gp-item-order").value) || 0,
+                is_active:
+                  card.querySelector(".new-gp-item-active").checked
+              },
+              "groupPurchaseStatus"
+            );
+          } finally {
+            button.disabled = false;
+          }
+        });
+
+      const itemsList =
+        card.querySelector(".gp-items-list");
+
+      const items =
+        Array.isArray(purchase.items)
+          ? purchase.items
+          : [];
+
+      if (!items.length) {
+        itemsList.innerHTML =
+          '<div class="empty">등록된 상품이 없습니다.</div>';
+      } else {
+        for (const item of items) {
+          const row =
+            document.createElement("div");
+
+          row.className =
+            "gp-item-row";
+
+          row.innerHTML = `
+            <div class="field">
+              <label>쿠폰 가격</label>
+              <input class="gp-item-price" type="number" min="1" step="1"
+                value="${escapeHtml(item.voucher_price)}">
+            </div>
+            <div class="field">
+              <label>최대 수량</label>
+              <input class="gp-item-max" type="number" min="1" step="1"
+                value="${escapeHtml(item.max_quantity)}">
+            </div>
+            <div class="field">
+              <label>순서</label>
+              <input class="gp-item-order" type="number"
+                value="${Number(item.sort_order) || 0}">
+            </div>
+            <label class="checkbox-label">
+              <input class="gp-item-active" type="checkbox"
+                ${item.is_active === true ? "checked" : ""}>
+              활성
+            </label>
+            <div class="gp-item-actions">
+              <button class="btn btn-small save-gp-item" type="button">
+                저장
+              </button>
+              <button class="btn btn-small btn-danger delete-gp-item" type="button">
+                삭제
+              </button>
+            </div>
+          `;
+
+          row.querySelector(".save-gp-item")
+            .addEventListener("click", async event => {
+              const price =
+                Number(row.querySelector(".gp-item-price").value);
+
+              const maxQuantity =
+                Number(row.querySelector(".gp-item-max").value);
+
+              if (
+                !Number.isSafeInteger(price) ||
+                price < 1 ||
+                !Number.isSafeInteger(maxQuantity) ||
+                maxQuantity < 1
+              ) {
+                setStatus(
+                  "groupPurchaseStatus",
+                  "쿠폰 가격과 최대 수량을 1 이상의 정수로 입력하세요.",
+                  "error"
+                );
+                return;
+              }
+
+              const button = event.currentTarget;
+              button.disabled = true;
+
+              try {
+                await action(
+                  {
+                    action:"update_group_purchase_item",
+                    id:item.id,
+                    voucher_price:price,
+                    max_quantity:maxQuantity,
+                    sort_order:
+                      Number(row.querySelector(".gp-item-order").value) || 0,
+                    is_active:
+                      row.querySelector(".gp-item-active").checked
+                  },
+                  "groupPurchaseStatus"
+                );
+              } finally {
+                button.disabled = false;
+              }
+            });
+
+          row.querySelector(".delete-gp-item")
+            .addEventListener("click", async event => {
+              if (!confirm("이 공동구매 상품을 삭제할까요?")) return;
+
+              const button = event.currentTarget;
+              button.disabled = true;
+
+              try {
+                await action(
+                  {
+                    action:"delete_group_purchase_item",
+                    id:item.id
+                  },
+                  "groupPurchaseStatus"
+                );
+              } finally {
+                button.disabled = false;
+              }
+            });
+
+          itemsList.appendChild(row);
+        }
+      }
+
+      const ordersList =
+        card.querySelector(".gp-orders-list");
+
+      const orders =
+        Array.isArray(purchase.orders)
+          ? purchase.orders
+          : [];
+
+      if (!orders.length) {
+        ordersList.innerHTML =
+          '<div class="empty">아직 공동구매 신청 내역이 없습니다.</div>';
+      } else {
+        const wrap =
+          document.createElement("div");
+
+        wrap.className =
+          "table-wrap";
+
+        const table =
+          document.createElement("table");
+
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>최종 수정</th>
+              <th>닉네임</th>
+              <th>재신청</th>
+              <th>신청 상품</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+
+        const tbody =
+          table.querySelector("tbody");
+
+        for (const order of orders) {
+          const tr =
+            document.createElement("tr");
+
+          const submissionCount =
+            Number(order.submission_count) || 1;
+
+          const resubmissionCount =
+            Math.max(submissionCount - 1, 0);
+
+          tr.innerHTML = `
+            <td>
+              ${escapeHtml(
+                order.updated_at
+                  ? new Date(order.updated_at).toLocaleString("ko-KR")
+                  : "-"
+              )}
+            </td>
+            <td>${escapeHtml(order.player_name)}</td>
+            <td>
+              ${
+                resubmissionCount > 0
+                  ? `${resubmissionCount}번째`
+                  : "최초"
+              }
+            </td>
+            <td class="gp-order-items">
+              ${escapeHtml(groupPurchaseOrderSummary(order) || "-")}
+            </td>
+            <td>
+              <button class="btn btn-small btn-danger delete-gp-order" type="button">
+                삭제
+              </button>
+            </td>
+          `;
+
+          tr.querySelector(".delete-gp-order")
+            .addEventListener("click", async event => {
+              if (!confirm("이 공동구매 신청 내역을 삭제할까요?")) return;
+
+              const button = event.currentTarget;
+              button.disabled = true;
+
+              try {
+                await action(
+                  {
+                    action:"delete_group_purchase_order",
+                    id:order.id
+                  },
+                  "groupPurchaseStatus"
+                );
+              } finally {
+                button.disabled = false;
+              }
+            });
+
+          tbody.appendChild(tr);
+        }
+
+        wrap.appendChild(table);
+        ordersList.appendChild(wrap);
+      }
+
+      container.appendChild(card);
+    }
+  }
+
+
+  document.getElementById(
+    "createGroupPurchaseButton"
+  ).addEventListener(
+    "click",
+    async () => {
+      if (!requireSelectedServer("groupPurchaseStatus")) return;
+
+      const titleEn =
+        document.getElementById("newGpTitleEn").value.trim();
+
+      const startValue =
+        document.getElementById("newGpStartsAt").value;
+
+      const closeValue =
+        document.getElementById("newGpClosesAt").value;
+
+      if (!titleEn) {
+        setStatus(
+          "groupPurchaseStatus",
+          "English 제목을 입력하세요.",
+          "error"
+        );
+        return;
+      }
+
+      if (
+        !startValue ||
+        !closeValue ||
+        new Date(closeValue).getTime() <=
+          new Date(startValue).getTime()
+      ) {
+        setStatus(
+          "groupPurchaseStatus",
+          "시작·마감 일시를 확인하세요. 마감은 시작 이후여야 합니다.",
+          "error"
+        );
+        return;
+      }
+
+      const button =
+        document.getElementById("createGroupPurchaseButton");
+
+      button.disabled = true;
+
+      try {
+        await action(
+          {
+            action:"create_group_purchase",
+            title_ko:optionalTitleValue("newGpTitleKo"),
+            title_en:titleEn,
+            title_ja:optionalTitleValue("newGpTitleJa"),
+            title_ru:optionalTitleValue("newGpTitleRu"),
+            starts_at:new Date(startValue).toISOString(),
+            closes_at:new Date(closeValue).toISOString(),
+            is_active:
+              document.getElementById("newGpIsActive").checked
+          },
+          "groupPurchaseStatus"
+        );
+
+        document.getElementById("newGpTitleKo").value = "";
+        document.getElementById("newGpTitleEn").value = "";
+        document.getElementById("newGpTitleJa").value = "";
+        document.getElementById("newGpTitleRu").value = "";
+        document.getElementById("newGpStartsAt").value = "";
+        document.getElementById("newGpClosesAt").value = "";
+        document.getElementById("newGpIsActive").checked = true;
+
+      } finally {
+        button.disabled = false;
+      }
+    }
+  );
+
+
+  // =========================================================
   // TIERS
   // =========================================================
 
@@ -4401,6 +5315,7 @@
     renderServerManagement();
     renderSettings();
     renderEmailRecipients();
+    renderGroupPurchases();
     renderAgreements();
     renderTiers();
     renderAlliances();
