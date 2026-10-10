@@ -486,6 +486,15 @@
       line-height: 1.35;
     }
   
+    .server-path-message-phrase {
+      display: inline-block;
+      max-width: 100%;
+      vertical-align: top;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      text-wrap: wrap;
+    }
+
   .turnstile-overlay {
     position: fixed;
     inset: 0;
@@ -2005,7 +2014,20 @@
       document.getElementById("serverLandingTitle");
 
     title.classList.add("server-path-message-title");
-    title.textContent = message;
+    title.replaceChildren();
+    const parts = Array.isArray(message) ? message : [message];
+    parts.forEach((part, index) => {
+      if (index > 0) {
+        if (currentLanguage !== "ja") {
+          title.appendChild(document.createTextNode(" "));
+        }
+        title.appendChild(document.createElement("wbr"));
+      }
+      const phrase = document.createElement("span");
+      phrase.className = "server-path-message-phrase";
+      phrase.textContent = part;
+      title.appendChild(phrase);
+    });
 
     document.getElementById("serverLandingDescription").textContent = "";
     form.classList.add("hidden");
@@ -2024,10 +2046,10 @@
 
   function showUnsupportedServerPage() {
     const messages = {
-      ko: "아직 지원하지 않는 서버입니다.",
-      en: "This server is not supported yet.",
-      ja: "このサーバーはまだ対応していません。",
-      ru: "Этот сервер пока не поддерживается."
+      ko: ["아직 지원하지 않는", "서버입니다."],
+      en: ["This server is not", "supported yet."],
+      ja: ["このサーバーは", "まだ対応していません。"],
+      ru: ["Этот сервер пока", "не поддерживается."]
     };
 
     showServerPathMessage(
@@ -2037,10 +2059,10 @@
 
   function showInvalidServerPathPage() {
     const messages = {
-      ko: "서버 번호를 숫자로 입력해주세요.",
-      en: "Please enter the server number using digits only.",
-      ja: "サーバー番号は数字で入力してください。",
-      ru: "Введите номер сервера только цифрами."
+      ko: ["서버 번호를", "숫자로 입력해주세요."],
+      en: ["Please enter the server number", "using digits only."],
+      ja: ["サーバー番号は", "数字で入力してください。"],
+      ru: ["Введите номер сервера", "только цифрами."]
     };
 
     showServerPathMessage(
