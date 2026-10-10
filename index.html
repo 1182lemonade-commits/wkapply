@@ -451,6 +451,28 @@
       outline: .125em solid var(--accent);
       outline-offset: .2em;
     }
+
+    .server-path-home-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 2.35em;
+      margin-top: 1rem;
+      padding: .5em .9em;
+      border: 0;
+      border-radius: .6em;
+      background: var(--accent);
+      color: var(--accent-text);
+      font-size: .9rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .server-path-home-button:focus-visible {
+      outline: .125em solid var(--accent);
+      outline-offset: .2em;
+    }
   
   .turnstile-overlay {
     position: fixed;
@@ -535,6 +557,14 @@
         role="status"
         aria-live="polite"
       ></div>
+
+      <button
+        id="serverPathHomeButton"
+        class="server-path-home-button hidden"
+        type="button"
+      >
+        확인
+      </button>
     </section>
   </div>
 
@@ -1018,7 +1048,8 @@
       numeric: "서버 번호를 숫자로 입력해주세요.",
       checking: "서버를 확인하고 있습니다.",
       unsupported: "아직 지원하지 않는 서버입니다.",
-      failed: "서버를 확인하지 못했습니다. 잠시 후 다시 시도해주세요."
+      failed: "서버를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.",
+      home: "확인"
     },
     en: {
       title: "Which server are you from?",
@@ -1028,7 +1059,8 @@
       numeric: "Please enter a numeric server number.",
       checking: "Checking the server.",
       unsupported: "This server is not supported yet.",
-      failed: "Unable to check the server. Please try again shortly."
+      failed: "Unable to check the server. Please try again shortly.",
+      home: "OK"
     },
     ja: {
       title: "どのサーバーから来ましたか？",
@@ -1038,7 +1070,8 @@
       numeric: "サーバー番号を数字で入力してください。",
       checking: "サーバーを確認しています。",
       unsupported: "このサーバーはまだ対応していません。",
-      failed: "サーバーを確認できませんでした。しばらくしてからもう一度お試しください。"
+      failed: "サーバーを確認できませんでした。しばらくしてからもう一度お試しください。",
+      home: "確認"
     },
     ru: {
       title: "С какого вы сервера?",
@@ -1048,7 +1081,8 @@
       numeric: "Введите номер сервера цифрами.",
       checking: "Проверяем сервер.",
       unsupported: "Этот сервер пока не поддерживается.",
-      failed: "Не удалось проверить сервер. Повторите попытку чуть позже."
+      failed: "Не удалось проверить сервер. Повторите попытку чуть позже.",
+      home: "ОК"
     }
   };
 
@@ -1083,6 +1117,13 @@
       "aria-label",
       t.description
     );
+
+    const homeButton =
+      document.getElementById("serverPathHomeButton");
+
+    if (homeButton) {
+      homeButton.textContent = t.home || t.submit;
+    }
   }
 
 
@@ -1920,6 +1961,7 @@
     });
 
     renderLandingLanguage();
+    document.getElementById("serverPathHomeButton").classList.add("hidden");
     landing.classList.remove("hidden");
 
     form.addEventListener("submit", async (event) => {
@@ -1951,6 +1993,14 @@
     form.classList.add("hidden");
     status.textContent = "";
 
+    const homeButton =
+      document.getElementById("serverPathHomeButton");
+
+    homeButton.textContent =
+      landingText().home || landingText().submit;
+
+    homeButton.classList.remove("hidden");
+
     landing.classList.remove("hidden");
   }
 
@@ -1965,6 +2015,15 @@
       landingText().numeric
     );
   }
+
+  document.getElementById(
+    "serverPathHomeButton"
+  ).addEventListener(
+    "click",
+    () => {
+      window.location.assign("/");
+    }
+  );
 
   let server = null;
 
