@@ -3694,6 +3694,7 @@
 
       const result = {
         "Player Name": order.player_name ?? "",
+        "Alliance": order.alliances?.name ?? "",
         "Submission Count": Number(order.submission_count) || 1,
         "Resubmission Count": Math.max((Number(order.submission_count) || 1) - 1, 0),
         "Updated At": order.updated_at
@@ -4196,6 +4197,7 @@
             <tr>
               <th>최종 수정</th>
               <th>닉네임</th>
+              <th>연맹</th>
               <th>재신청</th>
               <th>신청 상품</th>
               <th></th>
@@ -4226,6 +4228,7 @@
               )}
             </td>
             <td>${escapeHtml(order.player_name)}</td>
+            <td>${escapeHtml(order.alliances?.name || "-")}</td>
             <td>
               ${
                 resubmissionCount > 0
