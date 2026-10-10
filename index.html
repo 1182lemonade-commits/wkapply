@@ -841,6 +841,17 @@
         </div>
 
         <div class="field">
+          <label id="gpAllianceLabel" class="label" for="gpAlliance">
+            연맹
+            <span class="required">*</span>
+          </label>
+
+          <select id="gpAlliance" required>
+            <option value="">선택</option>
+          </select>
+        </div>
+
+        <div class="field">
           <div id="gpItemsLabel" class="label">
             상품
             <span class="required">*</span>
@@ -1625,6 +1636,8 @@
       intro: "구매할 상품 수량을 선택해 주세요.",
       playerName: "플레이어명",
       playerNamePlaceholder: "복붙해주세용😉",
+      alliance: "연맹",
+      select: "선택",
       items: "상품",
       quantity: "수량",
       maxQuantity: "최대 {count}개",
@@ -1654,6 +1667,8 @@
       intro: "Select the quantity you want for each item.",
       playerName: "Player Name",
       playerNamePlaceholder: "Please copy&paste😉",
+      alliance: "Alliance",
+      select: "Select",
       items: "Items",
       quantity: "Quantity",
       maxQuantity: "Maximum {count}",
@@ -1683,6 +1698,8 @@
       intro: "購入する商品の数量を選択してください。",
       playerName: "名前",
       playerNamePlaceholder: "コピペでお願いします。😉",
+      alliance: "同盟",
+      select: "選択",
       items: "商品",
       quantity: "数量",
       maxQuantity: "最大{count}個",
@@ -1712,6 +1729,8 @@
       intro: "Выберите количество для каждого товара.",
       playerName: "Имя",
       playerNamePlaceholder: "Скопируйте и вставьте, пожалуйста 😉))",
+      alliance: "Альянс",
+      select: "Выберите",
       items: "Товары",
       quantity: "Количество",
       maxQuantity: "Максимум: {count}",
@@ -2260,22 +2279,57 @@
     return { state: "open", isOpen: true };
   }
 
-  function savedProfilePlayerName() {
+  function savedProfileForServer() {
     const key = profileKey();
-    if (!key) return "";
+    if (!key) return null;
 
     try {
       const profile = JSON.parse(deviceStorage.getItem(key) || "null");
+
       return (
         profile &&
         typeof profile === "object" &&
-        !Array.isArray(profile) &&
-        typeof profile.playerName === "string"
+        !Array.isArray(profile)
       )
-        ? profile.playerName
-        : "";
+        ? profile
+        : null;
     } catch {
-      return "";
+      return null;
+    }
+  }
+
+  function applySavedProfileToGroupPurchase() {
+    const profile = savedProfileForServer();
+    if (!profile) return;
+
+    const playerName =
+      document.getElementById("gpPlayerName");
+
+    if (
+      !playerName.value &&
+      typeof profile.playerName === "string"
+    ) {
+      playerName.value = profile.playerName;
+    }
+
+    const allianceSelect =
+      document.getElementById("gpAlliance");
+
+    const savedAlliance =
+      typeof profile.alliance === "string"
+        ? profile.alliance
+        : "";
+
+    if (
+      !allianceSelect.value &&
+      savedAlliance &&
+      [...allianceSelect.options].some(
+        option =>
+          option.value === savedAlliance &&
+          !option.disabled
+      )
+    ) {
+      allianceSelect.value = savedAlliance;
     }
   }
 
@@ -2285,6 +2339,52 @@
     element.className =
       "status-message" +
       (type ? " " + type : "");
+  }
+
+  function renderGroupPurchaseAllianceOptions() {
+    const select =
+      document.getElementById("gpAlliance");
+
+    const current =
+      select.value;
+
+    select.innerHTML = "";
+
+    const placeholder =
+      document.createElement("option");
+
+    placeholder.value = "";
+    placeholder.textContent =
+      groupPurchaseText().select;
+
+    select.appendChild(
+      placeholder
+    );
+
+    for (const item of alliances) {
+      const option =
+        document.createElement("option");
+
+      option.value =
+        String(item.id);
+
+      option.textContent =
+        item.name;
+
+      select.appendChild(
+        option
+      );
+    }
+
+    if (
+      [...select.options].some(
+        option =>
+          option.value === current &&
+          !option.disabled
+      )
+    ) {
+      select.value = current;
+    }
   }
 
   function renderGroupPurchaseItems() {
@@ -2386,6 +2486,13 @@
 
     document.getElementById("gpPlayerName").placeholder =
       t.playerNamePlaceholder;
+
+    setLabelText(
+      "gpAllianceLabel",
+      t.alliance
+    );
+
+    renderGroupPurchaseAllianceOptions();
 
     setLabelText(
       "gpItemsLabel",
@@ -2492,6 +2599,7 @@
     }
 
     renderActiveView();
+    applySavedProfileToGroupPurchase();
   }
 
   viewSwitchButton.addEventListener(
@@ -2505,13 +2613,7 @@
           : "groupPurchase";
 
       if (activeView === "groupPurchase") {
-        const playerName =
-          document.getElementById("gpPlayerName");
-
-        if (!playerName.value) {
-          playerName.value =
-            savedProfilePlayerName();
-        }
+        applySavedProfileToGroupPurchase();
       }
 
       setGroupPurchaseStatus();
@@ -2542,6 +2644,22 @@
         playerName.length < 1 ||
         playerName.length > 100 ||
         playerName.trim().length === 0
+      ) {
+        setGroupPurchaseStatus(t.required, "error");
+        return;
+      }
+
+      const allianceId =
+        Number(
+          document.getElementById("gpAlliance").value
+        );
+
+      if (
+        !Number.isSafeInteger(allianceId) ||
+        !alliances.some(
+          item =>
+            Number(item.id) === allianceId
+        )
       ) {
         setGroupPurchaseStatus(t.required, "error");
         return;
@@ -2599,6 +2717,7 @@
             body: JSON.stringify({
               server_code: serverCode,
               player_name: playerName,
+              alliance_id: allianceId,
               items,
               agreement_purchase_required: true,
               agreement_future_restriction: true
