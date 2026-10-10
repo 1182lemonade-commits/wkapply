@@ -3042,37 +3042,162 @@
     }
   }
 
-  function renderGroupPurchaseState() {
-    const t = groupPurchaseText();
-    const state = groupPurchaseScheduleState();
+ function renderGroupPurchaseState() {
+  const t = groupPurchaseText();
+  const now = Date.now();
+  const state = groupPurchaseScheduleState(now);
 
-    const scheduleStatus =
-      document.getElementById("gpScheduleStatus");
+  const scheduleStatus =
+    document.getElementById("gpScheduleStatus");
 
-    const unavailableBox =
-      document.getElementById("gpUnavailableBox");
+  const unavailableBox =
+    document.getElementById("gpUnavailableBox");
 
-    if (state.state === "open") {
-      scheduleStatus.textContent = t.open;
-      scheduleStatus.className = "survey-status open";
-      groupPurchaseForm.classList.remove("hidden");
-      unavailableBox.classList.add("hidden");
-    } else {
-      const message =
-        state.state === "beforeOpen"
-          ? t.beforeOpen
-          : state.state === "closed"
-            ? t.closed
-            : t.unavailable;
+  if (!groupPurchase) {
+    scheduleStatus.textContent =
+      t.unavailable;
 
-      scheduleStatus.textContent = message;
-      scheduleStatus.className = "survey-status closed";
+    scheduleStatus.className =
+      "survey-status closed";
 
-      groupPurchaseForm.classList.add("hidden");
-      unavailableBox.textContent = message;
-      unavailableBox.classList.remove("hidden");
-    }
+    groupPurchaseForm.classList.add(
+      "hidden"
+    );
+
+    unavailableBox.textContent =
+      t.unavailable;
+
+    unavailableBox.classList.remove(
+      "hidden"
+    );
+
+    return;
   }
+
+  const startsAt =
+    new Date(
+      groupPurchase.starts_at
+    ).getTime();
+
+  const closesAt =
+    new Date(
+      groupPurchase.closes_at
+    ).getTime();
+
+  if (state.state === "open") {
+    scheduleStatus.textContent =
+      t.open;
+
+    scheduleStatus.className =
+      "survey-status open";
+
+    const countdown =
+      document.createElement("div");
+
+    countdown.className =
+      "small";
+
+    countdown.textContent =
+      (
+        language === "ko"
+          ? "신청 마감까지 "
+          : language === "ja"
+            ? "申請締切まで "
+            : language === "ru"
+              ? "До окончания приёма: "
+              : "Time remaining: "
+      ) +
+      formatTimeLeft(
+        closesAt,
+        now
+      );
+
+    scheduleStatus.appendChild(
+      countdown
+    );
+
+    groupPurchaseForm.classList.remove(
+      "hidden"
+    );
+
+    unavailableBox.classList.add(
+      "hidden"
+    );
+
+    return;
+  }
+
+  if (
+    state.state ===
+      "beforeOpen"
+  ) {
+    scheduleStatus.textContent =
+      t.beforeOpen;
+
+    scheduleStatus.className =
+      "survey-status closed";
+
+    const countdown =
+      document.createElement("div");
+
+    countdown.className =
+      "small";
+
+    countdown.textContent =
+      (
+        language === "ko"
+          ? "신청 시작까지 "
+          : language === "ja"
+            ? "申請開始まで "
+            : language === "ru"
+              ? "До начала приёма: "
+              : "Opens in: "
+      ) +
+      formatTimeLeft(
+        startsAt,
+        now
+      );
+
+    scheduleStatus.appendChild(
+      countdown
+    );
+
+    groupPurchaseForm.classList.add(
+      "hidden"
+    );
+
+    unavailableBox.textContent =
+      t.beforeOpen;
+
+    unavailableBox.classList.remove(
+      "hidden"
+    );
+
+    return;
+  }
+
+  const message =
+    state.state === "closed"
+      ? t.closed
+      : t.unavailable;
+
+  scheduleStatus.textContent =
+    message;
+
+  scheduleStatus.className =
+    "survey-status closed";
+
+  groupPurchaseForm.classList.add(
+    "hidden"
+  );
+
+  unavailableBox.textContent =
+    message;
+
+  unavailableBox.classList.remove(
+    "hidden"
+  );
+}
 
   function renderGroupPurchaseLanguage() {
     const t = groupPurchaseText();
