@@ -1975,7 +1975,21 @@
   let groupPurchase = null;
   let groupPurchaseItems = [];
   let groupPurchaseSubmitting = false;
-  let activeView = "wk";
+
+  const activeViewStorageKey =
+    serverCode
+      ? "wkapplication-active-view:" + serverCode
+      : null;
+
+  const savedActiveView =
+    activeViewStorageKey
+      ? deviceStorage.getItem(activeViewStorageKey)
+      : null;
+
+  let activeView =
+    savedActiveView === "groupPurchase"
+      ? "groupPurchase"
+      : "wk";
 
 
   // =========================================================
@@ -3267,6 +3281,13 @@
 
     if (!hasGroupPurchase && activeView === "groupPurchase") {
       activeView = "wk";
+
+      if (activeViewStorageKey) {
+        deviceStorage.setItem(
+          activeViewStorageKey,
+          activeView
+        );
+      }
     }
 
     const showGroupPurchase =
@@ -3345,6 +3366,13 @@
         activeView === "groupPurchase"
           ? "wk"
           : "groupPurchase";
+
+      if (activeViewStorageKey) {
+        deviceStorage.setItem(
+          activeViewStorageKey,
+          activeView
+        );
+      }
 
       if (activeView === "groupPurchase") {
         applySavedProfileToGroupPurchase();
