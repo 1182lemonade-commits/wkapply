@@ -471,13 +471,17 @@
       cursor: pointer;
     }
 
+    .server-path-home-button.hidden {
+      display: none;
+    }
+
     .server-path-home-button:focus-visible {
       outline: .125em solid var(--accent);
       outline-offset: .2em;
     }
 
     .server-path-message-title {
-      white-space: pre-line;
+      white-space: normal;
       text-wrap: balance;
       line-height: 1.35;
     }
@@ -2020,10 +2024,10 @@
 
   function showUnsupportedServerPage() {
     const messages = {
-      ko: "아직 지원하지 않는\n서버입니다.",
-      en: "This server is not\nsupported yet.",
-      ja: "このサーバーは\nまだ対応していません。",
-      ru: "Этот сервер пока\nне поддерживается."
+      ko: "아직 지원하지 않는 서버입니다.",
+      en: "This server is not supported yet.",
+      ja: "このサーバーはまだ対応していません。",
+      ru: "Этот сервер пока не поддерживается."
     };
 
     showServerPathMessage(
@@ -2033,10 +2037,10 @@
 
   function showInvalidServerPathPage() {
     const messages = {
-      ko: "서버 번호를\n숫자로 입력해주세요.",
-      en: "Please enter the server number\nusing digits only.",
-      ja: "サーバー番号は\n数字で入力してください。",
-      ru: "Введите номер сервера\nтолько цифрами."
+      ko: "서버 번호를 숫자로 입력해주세요.",
+      en: "Please enter the server number using digits only.",
+      ja: "サーバー番号は数字で入力してください。",
+      ru: "Введите номер сервера только цифрами."
     };
 
     showServerPathMessage(
