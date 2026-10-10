@@ -3695,8 +3695,6 @@
       const result = {
         "Player Name": order.player_name ?? "",
         "Alliance": order.alliances?.name ?? "",
-        "Submission Count": Number(order.submission_count) || 1,
-        "Resubmission Count": Math.max((Number(order.submission_count) || 1) - 1, 0),
         "Updated At": order.updated_at
           ? new Date(order.updated_at).toLocaleString("en-GB")
           : "",
