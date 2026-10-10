@@ -471,6 +471,20 @@
       cursor: pointer;
     }
 
+    @media (max-width: 35rem) {
+      .server-path-home-button {
+        width: 100%;
+        min-width: 0;
+        min-height: 2.875em;
+        margin-top: var(--space-large);
+        padding: .65em 1.1em;
+        border-radius: .65em;
+        font-size: inherit;
+        line-height: inherit;
+        white-space: nowrap;
+      }
+    }
+
     .server-path-home-button.hidden {
       display: none;
     }
@@ -2030,8 +2044,10 @@
     });
 
     document.getElementById("serverLandingDescription").textContent = "";
+    document.getElementById("serverLandingDescription").classList.add("hidden");
     form.classList.add("hidden");
     status.textContent = "";
+    status.classList.add("hidden");
 
     const homeButton =
       document.getElementById("serverPathHomeButton");
