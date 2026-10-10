@@ -451,7 +451,61 @@
       outline: .125em solid var(--accent);
       outline-offset: .2em;
     }
-  </style>
+  
+  .turnstile-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .turnstile-overlay.hidden {
+    display: none;
+  }
+
+  .turnstile-card {
+    width: min(100%, 420px);
+    padding: 22px;
+    border-radius: 18px;
+    background: var(--panel, #fff);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+  }
+
+  .turnstile-title {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  .turnstile-description {
+    margin: 0 0 16px;
+    line-height: 1.55;
+  }
+
+  .turnstile-widget {
+    min-height: 68px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .turnstile-status {
+    margin-top: 10px;
+    min-height: 1.4em;
+    font-size: 0.9rem;
+  }
+
+  .turnstile-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+</style>
 </head>
 
 <body>
@@ -912,6 +966,40 @@
 
   </main>
 
+  <div
+    id="turnstileOverlay"
+    class="turnstile-overlay hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="turnstileTitle"
+  >
+    <div class="turnstile-card">
+      <h2 id="turnstileTitle" class="turnstile-title"></h2>
+      <p id="turnstileDescription" class="turnstile-description"></p>
+
+      <div
+        id="turnstileWidget"
+        class="turnstile-widget"
+      ></div>
+
+      <div
+        id="turnstileStatus"
+        class="turnstile-status"
+        role="status"
+        aria-live="polite"
+      ></div>
+
+      <div class="turnstile-actions">
+        <button
+          id="turnstileCancelButton"
+          class="profile-delete-button"
+          type="button"
+        ></button>
+      </div>
+    </div>
+  </div>
+
+
 
 <script>
   // Storage can be unavailable in private/restricted browsers. Keep the form usable.
@@ -1045,6 +1133,10 @@
   const GROUP_PURCHASE_SUBMIT_URL =
     SUPABASE_URL +
     "/functions/v1/wk-group-purchase-submit";
+
+
+  const TURNSTILE_SITE_KEY =
+    "0x4AAAAAAFS9aMkuUx0Q0h3R";
 
 
   // =========================================================
@@ -2139,6 +2231,516 @@
   }
 
 
+  const TURNSTILE_TEXT = {
+    ko: {
+      title: "추가 확인이 필요합니다",
+      description:
+        "짧은 시간에 신청이 많이 접수되어 사람인지 확인한 뒤 신청을 계속합니다.",
+      checking: "확인 중입니다…",
+      failed: "확인에 실패했습니다. 다시 시도해 주세요.",
+      cancelled: "추가 확인이 취소되었습니다.",
+      cancel: "취소"
+    },
+
+    en: {
+      title: "Additional verification required",
+      description:
+        "A high number of applications was detected. Please verify that you are human to continue.",
+      checking: "Verifying…",
+      failed: "Verification failed. Please try again.",
+      cancelled: "Verification was cancelled.",
+      cancel: "Cancel"
+    },
+
+    ja: {
+      title: "追加確認が必要です",
+      description:
+        "短時間に多数の申請が検出されました。続行するには人間であることを確認してください。",
+      checking: "確認中です…",
+      failed: "確認に失敗しました。もう一度お試しください。",
+      cancelled: "追加確認をキャンセルしました。",
+      cancel: "キャンセル"
+    },
+
+    ru: {
+      title: "Требуется дополнительная проверка",
+      description:
+        "За короткое время поступило много заявок. Подтвердите, что вы человек, чтобы продолжить.",
+      checking: "Проверка…",
+      failed: "Проверка не удалась. Попробуйте ещё раз.",
+      cancelled: "Дополнительная проверка отменена.",
+      cancel: "Отмена"
+    }
+  };
+
+
+  let turnstileScriptPromise = null;
+  let turnstileWidgetId = null;
+  let pendingTurnstileSubmission = null;
+
+
+  function currentTurnstileText() {
+    return (
+      TURNSTILE_TEXT[language] ||
+      TURNSTILE_TEXT.en
+    );
+  }
+
+
+  function loadTurnstileScript() {
+    if (
+      window.turnstile &&
+      typeof window.turnstile.render === "function"
+    ) {
+      return Promise.resolve();
+    }
+
+    if (turnstileScriptPromise) {
+      return turnstileScriptPromise;
+    }
+
+    turnstileScriptPromise =
+      new Promise((resolve, reject) => {
+        const existing =
+          document.querySelector(
+            'script[data-wk-turnstile="1"]'
+          );
+
+        if (existing) {
+          const waitForApi = () => {
+            if (
+              window.turnstile &&
+              typeof window.turnstile.render === "function"
+            ) {
+              resolve();
+              return;
+            }
+
+            setTimeout(waitForApi, 50);
+          };
+
+          waitForApi();
+          return;
+        }
+
+        const script =
+          document.createElement("script");
+
+        script.src =
+          "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+
+        script.async = true;
+        script.defer = true;
+        script.dataset.wkTurnstile = "1";
+
+        script.onload = () => resolve();
+
+        script.onerror = () => {
+          turnstileScriptPromise = null;
+          reject(
+            new Error(
+              "TURNSTILE_SCRIPT_LOAD_FAILED"
+            )
+          );
+        };
+
+        document.head.appendChild(script);
+      });
+
+    return turnstileScriptPromise;
+  }
+
+
+  function closeTurnstileChallenge({
+    cancelled = false
+  } = {}) {
+    const overlay =
+      document.getElementById(
+        "turnstileOverlay"
+      );
+
+    const widget =
+      document.getElementById(
+        "turnstileWidget"
+      );
+
+    if (
+      turnstileWidgetId !== null &&
+      window.turnstile &&
+      typeof window.turnstile.remove === "function"
+    ) {
+      try {
+        window.turnstile.remove(
+          turnstileWidgetId
+        );
+      } catch {
+        // no-op
+      }
+    }
+
+    turnstileWidgetId = null;
+    pendingTurnstileSubmission = null;
+    widget.innerHTML = "";
+    overlay.classList.add("hidden");
+
+    if (cancelled) {
+      const t =
+        currentTurnstileText();
+
+      if (
+        activeView === "groupPurchase"
+      ) {
+        setGroupPurchaseStatus(
+          t.cancelled,
+          "error"
+        );
+      } else {
+        setFormStatus(
+          t.cancelled,
+          "error"
+        );
+      }
+    }
+  }
+
+
+  async function retryPendingWithTurnstile(
+    token
+  ) {
+    const pending =
+      pendingTurnstileSubmission;
+
+    if (!pending) {
+      return;
+    }
+
+    const t =
+      currentTurnstileText();
+
+    const status =
+      document.getElementById(
+        "turnstileStatus"
+      );
+
+    status.textContent =
+      t.checking;
+
+    try {
+      const response =
+        await fetch(
+          pending.kind === "wk"
+            ? SUBMIT_URL
+            : GROUP_PURCHASE_SUBMIT_URL,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              apikey:
+                SUPABASE_KEY,
+
+              Authorization:
+                "Bearer " +
+                SUPABASE_KEY
+            },
+
+            body:
+              JSON.stringify({
+                ...pending.payload,
+                turnstile_token:
+                  token
+              })
+          }
+        );
+
+      const result =
+        await parseJsonResponse(
+          response
+        );
+
+      const resubmissionCount =
+        Number(
+          result?.resubmissionCount
+        );
+
+      if (
+        pending.kind === "wk"
+      ) {
+        const successMessage =
+          Number.isInteger(
+            resubmissionCount
+          ) &&
+          resubmissionCount > 0
+            ? text().success +
+              " " +
+              resubmissionText(
+                resubmissionCount
+              )
+            : text().success;
+
+        closeTurnstileChallenge();
+
+        setFormStatus(
+          successMessage,
+          "success"
+        );
+
+        wkForm.reset();
+        renderRadioGroups();
+        renderAgreements();
+        updateParticipationState();
+
+        setTimeout(
+          () => {
+            window.location.reload();
+          },
+          2000
+        );
+
+        return;
+      }
+
+      const gpText =
+        groupPurchaseText();
+
+      const message =
+        Number.isInteger(
+          resubmissionCount
+        ) &&
+        resubmissionCount > 0
+          ? gpText.success +
+            " " +
+            gpText.resubmission.replaceAll(
+              "{count}",
+              String(
+                resubmissionCount
+              )
+            )
+          : gpText.success;
+
+      closeTurnstileChallenge();
+
+      setGroupPurchaseStatus(
+        message,
+        "success"
+      );
+
+      document
+        .querySelectorAll(
+          "[data-group-purchase-item-id]"
+        )
+        .forEach(select => {
+          select.value = "0";
+        });
+
+      document.getElementById(
+        "gpAgreementPurchaseRequired"
+      ).checked = false;
+
+      document.getElementById(
+        "gpAgreementFutureRestriction"
+      ).checked = false;
+
+    } catch (error) {
+      console.error(error);
+
+      if (
+        error.message ===
+          "CAPTCHA_REQUIRED"
+      ) {
+        status.textContent =
+          t.failed;
+
+        if (
+          turnstileWidgetId !== null &&
+          window.turnstile &&
+          typeof window.turnstile.reset ===
+            "function"
+        ) {
+          try {
+            window.turnstile.reset(
+              turnstileWidgetId
+            );
+          } catch {
+            // no-op
+          }
+        }
+
+        return;
+      }
+
+      closeTurnstileChallenge();
+
+      if (
+        pending.kind === "wk"
+      ) {
+        let message =
+          text().submitFailed;
+
+        if (
+          error.message ===
+            "SURVEY_CLOSED"
+        ) {
+          message =
+            text().applicationsClosed;
+        }
+
+        setFormStatus(
+          message,
+          "error"
+        );
+
+      } else {
+        const gpText =
+          groupPurchaseText();
+
+        let message =
+          gpText.failed;
+
+        if (
+          error.message ===
+            "GROUP_PURCHASE_NOT_OPEN"
+        ) {
+          message =
+            gpText.closed;
+        }
+
+        setGroupPurchaseStatus(
+          message,
+          "error"
+        );
+      }
+    }
+  }
+
+
+  async function showTurnstileChallenge(
+    kind,
+    payload
+  ) {
+    pendingTurnstileSubmission = {
+      kind,
+      payload
+    };
+
+    const copy =
+      currentTurnstileText();
+
+    document.getElementById(
+      "turnstileTitle"
+    ).textContent =
+      copy.title;
+
+    document.getElementById(
+      "turnstileDescription"
+    ).textContent =
+      copy.description;
+
+    document.getElementById(
+      "turnstileCancelButton"
+    ).textContent =
+      copy.cancel;
+
+    document.getElementById(
+      "turnstileStatus"
+    ).textContent = "";
+
+    const overlay =
+      document.getElementById(
+        "turnstileOverlay"
+      );
+
+    overlay.classList.remove(
+      "hidden"
+    );
+
+    try {
+      await loadTurnstileScript();
+
+      const widget =
+        document.getElementById(
+          "turnstileWidget"
+        );
+
+      widget.innerHTML = "";
+
+      if (
+        turnstileWidgetId !== null &&
+        window.turnstile &&
+        typeof window.turnstile.remove ===
+          "function"
+      ) {
+        try {
+          window.turnstile.remove(
+            turnstileWidgetId
+          );
+        } catch {
+          // no-op
+        }
+      }
+
+      turnstileWidgetId =
+        window.turnstile.render(
+          widget,
+          {
+            sitekey:
+              TURNSTILE_SITE_KEY,
+
+            theme:
+              "auto",
+
+            callback:
+              token => {
+                void retryPendingWithTurnstile(
+                  token
+                );
+              },
+
+            "expired-callback":
+              () => {
+                document.getElementById(
+                  "turnstileStatus"
+                ).textContent =
+                  currentTurnstileText()
+                    .failed;
+              },
+
+            "error-callback":
+              () => {
+                document.getElementById(
+                  "turnstileStatus"
+                ).textContent =
+                  currentTurnstileText()
+                    .failed;
+              }
+          }
+        );
+
+    } catch (error) {
+      console.error(error);
+
+      document.getElementById(
+        "turnstileStatus"
+      ).textContent =
+        copy.failed;
+    }
+  }
+
+
+  document.getElementById(
+    "turnstileCancelButton"
+  ).addEventListener(
+    "click",
+    () => {
+      closeTurnstileChallenge({
+        cancelled: true
+      });
+    }
+  );
+
+
   async function parseJsonResponse(
     response
   ) {
@@ -2758,16 +3360,49 @@
       } catch (error) {
         console.error(error);
 
-        let message = t.failed;
+        if (
+          error.message ===
+            "CAPTCHA_REQUIRED"
+        ) {
+          await showTurnstileChallenge(
+            "groupPurchase",
+            {
+              server_code:
+                serverCode,
 
-        if (error.message === "GROUP_PURCHASE_NOT_OPEN") {
-          message = t.closed;
+              player_name:
+                playerName,
+
+              alliance_id:
+                allianceId,
+
+              items,
+
+              agreement_purchase_required:
+                true,
+
+              agreement_future_restriction:
+                true
+            }
+          );
+
+        } else {
+          let message =
+            t.failed;
+
+          if (
+            error.message ===
+              "GROUP_PURCHASE_NOT_OPEN"
+          ) {
+            message =
+              t.closed;
+          }
+
+          setGroupPurchaseStatus(
+            message,
+            "error"
+          );
         }
-
-        setGroupPurchaseStatus(
-          message,
-          "error"
-        );
 
       } finally {
         groupPurchaseSubmitting = false;
@@ -3713,7 +4348,8 @@
 
     if (
       playerName.length < 1 ||
-      playerName.length > 100
+      playerName.length > 100 ||
+      playerName.trim().length === 0
     ) {
 
       return {
@@ -4092,25 +4728,39 @@
         );
 
 
-        let message =
-          text().submitFailed;
-
-
         if (
           error.message ===
-          "SURVEY_CLOSED"
+            "CAPTCHA_REQUIRED"
         ) {
 
-          message =
-            text().applicationsClosed;
+          await showTurnstileChallenge(
+            "wk",
+            validation.payload
+          );
+
+        } else {
+
+          let message =
+            text().submitFailed;
+
+
+          if (
+            error.message ===
+            "SURVEY_CLOSED"
+          ) {
+
+            message =
+              text().applicationsClosed;
+
+          }
+
+
+          setFormStatus(
+            message,
+            "error"
+          );
 
         }
-
-
-        setFormStatus(
-          message,
-          "error"
-        );
 
 
       } finally {
