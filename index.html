@@ -1931,6 +1931,41 @@
     return true;
   }
 
+  function showServerPathMessage(message) {
+    const landing = document.getElementById("serverLanding");
+    const form = document.getElementById("serverLandingForm");
+    const status = document.getElementById("serverLandingStatus");
+
+    Array.from(document.body.children).forEach((element) => {
+      if (element !== landing && element.tagName !== "SCRIPT") {
+        element.style.display = "none";
+      }
+    });
+
+    renderLandingLanguage();
+
+    document.getElementById("serverLandingTitle").textContent =
+      message;
+
+    document.getElementById("serverLandingDescription").textContent = "";
+    form.classList.add("hidden");
+    status.textContent = "";
+
+    landing.classList.remove("hidden");
+  }
+
+  function showUnsupportedServerPage() {
+    showServerPathMessage(
+      landingText().unsupported
+    );
+  }
+
+  function showInvalidServerPathPage() {
+    showServerPathMessage(
+      landingText().numeric
+    );
+  }
+
   let server = null;
 
 
@@ -4425,6 +4460,12 @@
 
     } catch (error) {
       console.error(error);
+
+      if (error?.message === "SERVER_NOT_FOUND") {
+        showUnsupportedServerPage();
+        return;
+      }
+
       server = null;
       settings = null;
       tiers = [];
@@ -4965,7 +5006,11 @@
   renderLanguage();
 
   if (!initializeServerLanding()) {
-    loadData();
+    if (!serverCode) {
+      showInvalidServerPathPage();
+    } else {
+      loadData();
+    }
   }
 
   setInterval(() => {
