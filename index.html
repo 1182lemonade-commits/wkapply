@@ -546,6 +546,16 @@
       >
         확인
       </button>
+
+      <div id="landingContact" class="landing-contact" hidden>
+        <div class="contact-row">
+          <span id="contactLabel"></span>
+          <button id="contactEmail" class="contact-email" type="button" aria-describedby="contactGuidance">contact@wkapply.com</button>
+          <button id="contactInfo" class="contact-info" type="button" aria-controls="contactGuidance" aria-expanded="false"><span aria-hidden="true">i</span></button>
+        </div>
+        <div id="contactGuidance" class="contact-guidance" role="tooltip" hidden></div>
+        <div id="contactStatus" class="contact-status" role="status" aria-live="polite" aria-atomic="true"></div>
+      </div>
     </section>
   </div>
 
@@ -1032,6 +1042,56 @@
     }
   };
 
+
+  const contactTranslations = {"ko": {"label": "문의", "copy": "이메일 주소 복사", "info": "문의 안내", "success": "이메일 주소가 복사되었습니다.", "failure": "복사하지 못했습니다. 이메일 주소를 직접 복사해 주세요.", "guidance": "사이트 관련 오류, 불편사항, 개선 의견 또는 제작자에게 전하고 싶은 내용은 contact@wkapply.com으로 보내주세요. 메일은 가장 편한 언어로 작성해 주세요. 의미 왜곡을 방지하기 위해 번역기나 자동 번역을 사용하지 말고 원문 그대로 보내주시길 부탁드립니다. 필요한 번역은 수신 후 직접 처리합니다."}, "en": {"label": "Contact", "copy": "Copy email address", "info": "Contact information", "success": "Email address copied.", "failure": "Unable to copy. Please copy the email address manually.", "guidance": "For website errors, issues, suggestions, or anything you would like to tell the developer, please contact contact@wkapply.com. Please write your message in whichever language you are most comfortable using. To avoid loss or distortion of meaning, please do not use a translator or automatic translation—send your message in the original language. Translation will be handled after the message is received."}, "ja": {"label": "お問い合わせ", "copy": "メールアドレスをコピー", "info": "お問い合わせのご案内", "success": "メールアドレスをコピーしました。", "failure": "コピーできませんでした。メールアドレスを手動でコピーしてください。", "guidance": "サイトの不具合、不便な点、改善案、または制作者に伝えたいことがある場合は、contact@wkapply.com までご連絡ください。メールはご自身が最も使いやすい言語でお書きください。意味のずれや誤解を防ぐため、翻訳ツールや自動翻訳は使用せず、原文のまま送っていただくようお願いいたします。必要な翻訳はこちらで受信後に行います。"}, "ru": {"label": "Контакты", "copy": "Скопировать адрес электронной почты", "info": "Информация для связи", "success": "Адрес электронной почты скопирован.", "failure": "Не удалось скопировать. Скопируйте адрес вручную.", "guidance": "Если вы хотите сообщить об ошибке на сайте, неудобстве, предложить улучшение или написать разработчику, отправьте сообщение на contact@wkapply.com. Пожалуйста, пишите на том языке, которым вам удобнее всего пользоваться. Чтобы избежать искажения смысла, не используйте переводчики или автоматический перевод — отправляйте текст на языке оригинала. При необходимости перевод будет выполнен после получения сообщения."}};
+  const contactSection = document.getElementById("landingContact");
+  const contactEmail = document.getElementById("contactEmail");
+  const contactInfo = document.getElementById("contactInfo");
+  const contactGuidance = document.getElementById("contactGuidance");
+  const contactStatus = document.getElementById("contactStatus");
+  let contactPinned = false;
+  let contactStatusKey = "";
+  let contactTimer;
+  function setContactOpen(open) {
+    contactGuidance.hidden = !open;
+    contactInfo.setAttribute("aria-expanded", String(open));
+  }
+  function renderContactLanguage() {
+    const t = contactTranslations[landingLanguage] || contactTranslations.en;
+    contactSection.hidden = !["", "/"].includes(window.location.pathname);
+    document.getElementById("contactLabel").textContent = t.label + ":";
+    contactEmail.setAttribute("aria-label", t.copy + ": contact@wkapply.com");
+    contactInfo.setAttribute("aria-label", t.info);
+    contactInfo.title = t.info;
+    contactGuidance.textContent = t.guidance;
+    contactGuidance.lang = landingLanguage;
+    contactStatus.textContent = contactStatusKey ? t[contactStatusKey] : "";
+  }
+  const contactHover = window.matchMedia("(hover: hover) and (pointer: fine)");
+  contactEmail.addEventListener("pointerenter", e => { if (contactHover.matches && e.pointerType !== "touch") setContactOpen(true); });
+  contactEmail.addEventListener("focus", () => { if (contactEmail.matches(":focus-visible")) setContactOpen(true); });
+  contactSection.addEventListener("pointerleave", () => { if (!contactPinned && !contactSection.contains(document.activeElement)) setContactOpen(false); });
+  contactSection.addEventListener("focusout", e => { if (!contactPinned && !contactSection.contains(e.relatedTarget) && !contactSection.matches(":hover")) setContactOpen(false); });
+  contactInfo.addEventListener("click", () => { contactPinned = !contactPinned; setContactOpen(contactPinned); });
+  document.addEventListener("pointerdown", e => { if (!contactSection.contains(e.target)) { contactPinned = false; setContactOpen(false); } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { contactPinned = false; setContactOpen(false); } });
+  contactEmail.addEventListener("click", async () => {
+    let copied = false;
+    try { await navigator.clipboard.writeText("contact@wkapply.com"); copied = true; } catch {
+      const field = document.createElement("textarea");
+      field.value = "contact@wkapply.com";
+      field.setAttribute("readonly", "");
+      field.style.cssText = "position:fixed;left:-9999px;top:0";
+      document.body.appendChild(field);
+      const previous = document.activeElement;
+      try { field.select(); copied = document.execCommand("copy"); } catch {} finally { field.remove(); previous?.focus({preventScroll:true}); }
+    }
+    contactStatusKey = copied ? "success" : "failure";
+    renderContactLanguage();
+    clearTimeout(contactTimer);
+    contactTimer = setTimeout(() => { contactStatusKey = ""; contactStatus.textContent = ""; }, 5000);
+  });
+
   function getLandingLanguage() {
     const saved =
       deviceStorage.getItem("wkapplication-language") ||
@@ -1054,6 +1114,7 @@
   }
 
   function renderLandingLanguage() {
+    renderContactLanguage();
     const t = landingText();
     document.getElementById("serverLandingTitle").textContent = t.title;
     document.getElementById("serverLandingDescription").textContent = t.description;
