@@ -2196,7 +2196,7 @@
         }
 
         if (error.message === "EMAIL_RECIPIENT_LIMIT") {
-          message = "활성 수신 이메일은 서버별 최대 3개입니다.";
+          message = "활성 수신 이메일은 서버별 최대 5개입니다.";
         }
 
         if (error.message === "EMAIL_RECIPIENT_EXISTS") {
@@ -2862,7 +2862,6 @@
     const manualButton = document.getElementById("manualEmailSendButton");
     const testButton = document.getElementById("testEmailSendButton");
     const newEmail = document.getElementById("newEmailRecipient");
-    const newOrder = document.getElementById("newEmailRecipientOrder");
 
     if (!selectedServerCode) {
       list.innerHTML = '<div class="muted">먼저 관리할 서버를 선택하세요.</div>';
@@ -2870,14 +2869,12 @@
       manualButton.disabled = true;
       testButton.disabled = true;
       newEmail.disabled = true;
-      newOrder.disabled = true;
       renderEmailDeliveryLogs();
       return;
     }
 
     addButton.disabled = false;
     newEmail.disabled = false;
-    newOrder.disabled = false;
 
     const recipients = Array.isArray(adminData.emailRecipients)
       ? adminData.emailRecipients
@@ -3092,7 +3089,6 @@
 );
 
         document.getElementById("newEmailRecipient").value = "";
-        document.getElementById("newEmailRecipientOrder").value = "0";
 
       } finally {
         button.disabled = false;
