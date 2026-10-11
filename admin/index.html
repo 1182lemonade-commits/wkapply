@@ -1454,6 +1454,13 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>
+function formatUtc(value) {
+  if (value === null || value === undefined || value === "") return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  return date.toISOString().slice(0, 19).replace("T", " ") + " UTC";
+}
+
   // =========================================================
   // CONFIG
   // =========================================================
@@ -3028,9 +3035,9 @@
 
       const sentAt =
         item.sent_at
-          ? new Date(item.sent_at).toLocaleString("ko-KR")
+          ? formatUtc(new Date(item.sent_at))
           : item.created_at
-            ? new Date(item.created_at).toLocaleString("ko-KR")
+            ? formatUtc(new Date(item.created_at))
             : "-";
 
       const text = document.createElement("div");
@@ -3712,7 +3719,7 @@
         "Player Name": order.player_name ?? "",
         "Alliance": order.alliances?.name ?? "",
         "Updated At": order.updated_at
-          ? new Date(order.updated_at).toLocaleString("en-GB")
+          ? formatUtc(new Date(order.updated_at))
           : "",
       };
 
@@ -3817,12 +3824,12 @@
               <span>신청 ${orderCount}건</span>
               ${
                 purchase.email_sent_at
-                  ? `<span>이메일 ${escapeHtml(new Date(purchase.email_sent_at).toLocaleString("ko-KR"))}</span>`
+                  ? `<span>이메일 ${escapeHtml(formatUtc(new Date(purchase.email_sent_at)))}</span>`
                   : ""
               }
               ${
                 purchase.purge_after_at
-                  ? `<span>삭제 예정 ${escapeHtml(new Date(purchase.purge_after_at).toLocaleString("ko-KR"))}</span>`
+                  ? `<span>삭제 예정 ${escapeHtml(formatUtc(new Date(purchase.purge_after_at)))}</span>`
                   : ""
               }
             </div>
@@ -4237,7 +4244,7 @@
             <td>
               ${escapeHtml(
                 order.updated_at
-                  ? new Date(order.updated_at).toLocaleString("ko-KR")
+                  ? formatUtc(new Date(order.updated_at))
                   : "-"
               )}
             </td>
@@ -4985,7 +4992,7 @@
       "Real-time Response": applicationLabel("realtime_response", item.realtime_response),
       "Captain Role": applicationLabel("captain_role", item.captain_role),
       "Participation Time": applicationLabel("participation_time", item.participation_time),
-      "Submitted At": item.created_at ? new Date(item.created_at).toLocaleString("en-GB") : ""
+      "Submitted At": item.created_at ? formatUtc(new Date(item.created_at)) : ""
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
@@ -5128,11 +5135,9 @@
 
       const date =
         item.created_at
-          ? new Date(
+          ? formatUtc(new Date(
               item.created_at
-            ).toLocaleString(
-              "ko-KR"
-            )
+            ))
           : "";
 
 
@@ -5304,11 +5309,11 @@
     wrap.setAttribute("role", "region");
     wrap.setAttribute("aria-label", "신청 변경 이력 표. 가로 스크롤 가능");
     const table = document.createElement("table");
-    table.innerHTML = '<thead><tr><th scope="col">변경 시각 (기기 시간대)</th><th scope="col">회차</th><th scope="col">플레이어명</th><th scope="col">변경 필드</th><th scope="col">변경 전 값</th><th scope="col">변경 후 값</th></tr></thead><tbody></tbody>';
+    table.innerHTML = '<thead><tr><th scope="col">변경 시각 (UTC)</th><th scope="col">회차</th><th scope="col">플레이어명</th><th scope="col">변경 필드</th><th scope="col">변경 전 값</th><th scope="col">변경 후 값</th></tr></thead><tbody></tbody>';
     const body = table.querySelector("tbody");
     rows.forEach(({item, time}) => {
       const field = item.field_name ?? item.fieldName;
-      const date = Number.isFinite(time) ? new Date(time).toLocaleString("ko-KR", {hour12:false}) : "—";
+      const date = Number.isFinite(time) ? formatUtc(new Date(time)) : "—";
       const values = [date, item.cycle_number ?? item.cycleNumber ?? "—",
         item.player_name ?? item.playerName ?? "—", labels[field] ?? field,
         formatValue(item.old_value !== undefined ? item.old_value : item.oldValue),
